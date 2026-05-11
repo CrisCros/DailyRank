@@ -14,6 +14,7 @@ type AppShellProps = {
 
 const navItems = [
   { href: "/dashboard", label: "Inicio" },
+  { href: "/day", label: "Mi día", activePrefixes: ["/day", "/posts"] },
   { href: "/profile", label: "Perfil" },
   { href: "/settings", label: "Configuración" },
 ];
@@ -28,7 +29,9 @@ export function AppShell({ children }: AppShellProps) {
 
         <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = item.activePrefixes
+              ? item.activePrefixes.some((prefix) => pathname.startsWith(prefix))
+              : pathname === item.href;
 
             return (
               <Link
