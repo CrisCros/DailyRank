@@ -14,8 +14,8 @@ function encodeMessage(message: string) {
   return encodeURIComponent(message);
 }
 
-function settingsRedirect(type: "error" | "success", message: string): never {
-  redirect(`/settings?${type}=${encodeMessage(message)}`);
+function settingsRedirect(type: "error" | "success", message: string) {
+  return redirect(`/settings?${type}=${encodeMessage(message)}`);
 }
 
 export async function updateAccountSettingsAction(formData: FormData) {

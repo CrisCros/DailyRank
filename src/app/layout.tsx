@@ -19,6 +19,44 @@ export const viewport: Viewport = {
   initialScale: 1
 };
 
+const themeBootScript = `
+(function () {
+  function resolveTheme(preference) {
+    if (preference === "dark" || preference === "light") {
+      return preference;
+    }
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  function applyTheme(theme) {
+    var root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(theme);
+    root.style.colorScheme = theme;
+  }
+
+  try {
+    var root = document.documentElement;
+    var preference = root.dataset.themePreference || "system";
+    var media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    applyTheme(resolveTheme(preference));
+
+    if (preference === "system") {
+      var onChange = function () {
+        applyTheme(resolveTheme("system"));
+      };
+
+      if (typeof media.addEventListener === "function") {
+        media.addEventListener("change", onChange);
+      } else if (typeof media.addListener === "function") {
+        media.addListener(onChange);
+      }
+    }
+  } catch (_) {}
+})();`;
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await getServerSession(authOptions);
   const settings = session?.user?.id
@@ -27,10 +65,19 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         select: { theme: true },
       })
     : null;
-  const themeClass = settings?.theme === "DARK" ? "dark" : settings?.theme === "LIGHT" ? "light" : undefined;
+  const themePreference = settings?.theme ?? "SYSTEM";
+  const initialThemeClass = themePreference === "DARK" ? "dark" : "light";
 
   return (
-    <html className={themeClass} lang="es" suppressHydrationWarning>
+    <html
+      className={initialThemeClass}
+      data-theme-preference={themePreference.toLowerCase()}
+      lang="es"
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );
