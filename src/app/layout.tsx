@@ -1,4 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { getServerSession } from "next-auth";
+
+import { authOptions } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
 import "./globals.css";
 
@@ -15,9 +19,18 @@ export const viewport: Viewport = {
   initialScale: 1
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const session = await getServerSession(authOptions);
+  const settings = session?.user?.id
+    ? await prisma.userSettings.findUnique({
+        where: { userId: session.user.id },
+        select: { theme: true },
+      })
+    : null;
+  const themeClass = settings?.theme === "DARK" ? "dark" : settings?.theme === "LIGHT" ? "light" : undefined;
+
   return (
-    <html lang="es">
+    <html className={themeClass} lang="es" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );
