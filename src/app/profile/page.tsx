@@ -59,7 +59,7 @@ export default async function ProfilePage() {
               </div>
 
               <div className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
-                Tema: {user.settings?.theme === "DARK" ? "Oscuro" : user.settings?.theme === "LIGHT" ? "Claro" : "Sistema"}
+                Tema: {user.settings?.theme === "DARK" ? "Oscuro" : user.settings?.theme === "SYSTEM" ? "Sistema" : "Claro"}
               </div>
             </div>
 

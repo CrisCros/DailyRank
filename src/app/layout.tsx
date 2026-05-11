@@ -38,7 +38,7 @@ const themeBootScript = `
 
   try {
     var root = document.documentElement;
-    var preference = root.dataset.themePreference || "system";
+    var preference = root.dataset.themePreference || "light";
     var media = window.matchMedia("(prefers-color-scheme: dark)");
 
     applyTheme(resolveTheme(preference));
@@ -65,13 +65,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         select: { theme: true },
       })
     : null;
-  const themePreference = settings?.theme ?? "SYSTEM";
-  const initialThemeClass = themePreference === "DARK" ? "dark" : "light";
+  const themePreference = session?.user?.id && settings?.theme ? settings.theme.toLowerCase() : "light";
+  const initialThemeClass = themePreference === "dark" ? "dark" : "light";
 
   return (
     <html
       className={initialThemeClass}
-      data-theme-preference={themePreference.toLowerCase()}
+      data-theme-preference={themePreference}
       lang="es"
       suppressHydrationWarning
     >

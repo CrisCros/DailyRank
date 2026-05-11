@@ -39,7 +39,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     redirect("/login");
   }
 
-  const theme = user.settings?.theme ?? "SYSTEM";
+  const theme = user.settings?.theme ?? "LIGHT";
 
   return (
     <AppShell>

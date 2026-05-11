@@ -52,7 +52,7 @@ export async function registerAction(formData: FormData) {
         email,
         passwordHash,
         settings: {
-          create: {},
+          create: { theme: "LIGHT" },
         },
       },
     });
