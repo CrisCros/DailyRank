@@ -1,25 +1,25 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { compare } from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/validations/auth";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
   },
   pages: {
-    signIn: "/login"
+    signIn: "/login",
   },
   providers: [
-    Credentials({
+    CredentialsProvider({
       name: "Credenciales",
       credentials: {
         identifier: { label: "Email o username", type: "text" },
-        password: { label: "Contraseña", type: "password" }
+        password: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
@@ -29,10 +29,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const identifier = parsed.data.identifier.toLowerCase();
+
         const user = await prisma.user.findFirst({
           where: {
-            OR: [{ email: identifier }, { username: identifier }]
-          }
+            OR: [{ email: identifier }, { username: identifier }],
+          },
         });
 
         if (!user) {
@@ -50,16 +51,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           email: user.email,
           image: user.image,
-          username: user.username
+          username: user.username,
         };
-      }
-    })
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.username = user.username;
+
+        if ("username" in user) {
+          token.username = user.username;
+        }
       }
 
       return token;
@@ -71,6 +75,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       return session;
-    }
-  }
-});
+    },
+  },
+};

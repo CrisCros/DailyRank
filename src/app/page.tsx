@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Lock, Smartphone, Users, type LucideIcon } from "lucide-react";
+import { getServerSession } from "next-auth";
 
-import { auth } from "@/auth";
+import { authOptions } from "@/auth";
 import { Brand } from "@/components/brand";
 
 const featureCards: Array<{ icon: LucideIcon; title: string; text: string }> = [
@@ -11,7 +12,7 @@ const featureCards: Array<{ icon: LucideIcon; title: string; text: string }> = [
 ];
 
 export default async function HomePage() {
-  const session = await auth();
+  const session = await getServerSession(authOptions);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6">
