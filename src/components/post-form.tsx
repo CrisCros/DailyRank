@@ -186,7 +186,7 @@ export function PostForm({ action, cancelHref, mode, post }: PostFormProps) {
         {previewUrl ? (
           <div
             aria-label="Vista previa de la foto seleccionada"
-            className="min-h-64 rounded-[1.5rem] border border-slate-200 bg-cover bg-center bg-no-repeat shadow-inner dark:border-slate-800"
+            className="aspect-square min-h-0 rounded-[1.5rem] border border-slate-200 bg-cover bg-center bg-no-repeat shadow-inner dark:border-slate-800"
             role="img"
             style={{ backgroundImage: `url(${previewUrl})` }}
           />
@@ -198,10 +198,16 @@ export function PostForm({ action, cancelHref, mode, post }: PostFormProps) {
           </div>
         )}
 
+        <label
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200 sm:w-auto"
+          htmlFor="photo"
+        >
+          <Camera className="size-5" /> {previewUrl ? "Cambiar foto" : "Añadir foto"}
+        </label>
         <input
           accept="image/*"
           capture="environment"
-          className={inputClass}
+          className="sr-only"
           id="photo"
           name="photo"
           onChange={handlePhotoChange}

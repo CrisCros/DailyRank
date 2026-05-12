@@ -26,6 +26,8 @@ model User {
   comments            Comment[]
   sentFriendships     Friendship[]  @relation("FriendshipRequester")
   receivedFriendships Friendship[]  @relation("FriendshipReceiver")
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsActed    Notification[] @relation("NotificationActor")
 
   @@index([name])
   @@index([username])
@@ -92,11 +94,29 @@ model Friendship {
   updatedAt   DateTime         @updatedAt
   requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   receiver    User             @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  notifications Notification[]
 
   @@unique([requesterId, receiverId])
   @@index([requesterId, status])
   @@index([receiverId, status])
   @@index([status])
+}
+
+model Notification {
+  id           String           @id @default(cuid())
+  recipientId  String
+  actorId      String
+  type         NotificationType
+  friendshipId String?
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+  recipient    User             @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor        User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  friendship   Friendship?      @relation(fields: [friendshipId], references: [id], onDelete: SetNull)
+
+  @@index([recipientId, readAt, createdAt])
+  @@index([actorId])
+  @@index([friendshipId])
 }
 
 model UserSettings {
@@ -169,4 +189,10 @@ enum FriendshipStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+
+enum NotificationType {
+  FRIEND_REQUEST_RECEIVED
+  FRIEND_REQUEST_ACCEPTED
 }
