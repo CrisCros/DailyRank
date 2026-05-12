@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/auth";
 import { startOfTodayUtc } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
+import { postIdSchema } from "@/validations/likes";
 import { postSchema } from "@/validations/posts";
 
 function encodeMessage(message: string) {
@@ -27,6 +28,18 @@ function getPostInput(formData: FormData) {
     visibility: formData.get("visibility"),
     photoUrl: formData.get("photoUrl"),
   });
+}
+
+
+function canViewPost(userId: string, post: { userId: string; visibility: "PRIVATE" | "FRIENDS" | "PUBLIC" }) {
+  return post.userId === userId || post.visibility === "PUBLIC";
+}
+
+function revalidatePostViews(postId: string) {
+  revalidatePath("/feed");
+  revalidatePath("/day");
+  revalidatePath(`/posts/${postId}`);
+  revalidatePath(`/posts/${postId}/edit`);
 }
 
 async function getRequiredUserId() {
@@ -130,4 +143,51 @@ export async function deletePostAction(formData: FormData) {
   revalidatePath("/feed");
   revalidatePath("/dashboard");
   redirect(`/day?success=${encodeMessage("Publicación borrada correctamente.")}`);
+}
+
+
+export async function toggleLikeAction(postId: string) {
+  const userId = await getRequiredUserId();
+  const parsedPostId = postIdSchema.safeParse(postId);
+
+  if (!parsedPostId.success) {
+    throw new Error(parsedPostId.error.issues[0]?.message ?? "La publicación no es válida.");
+  }
+
+  const post = await prisma.post.findUnique({
+    where: { id: parsedPostId.data },
+    select: {
+      id: true,
+      userId: true,
+      visibility: true,
+    },
+  });
+
+  if (!post || !canViewPost(userId, post)) {
+    throw new Error("No puedes dar like a una publicación que no puedes ver.");
+  }
+
+  const existingLike = await prisma.like.findUnique({
+    where: { userId_postId: { userId, postId: post.id } },
+    select: { id: true },
+  });
+
+  if (existingLike) {
+    await prisma.like.delete({ where: { id: existingLike.id } });
+  } else {
+    try {
+      await prisma.like.create({
+        data: {
+          postId: post.id,
+          userId,
+        },
+      });
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) {
+        throw error;
+      }
+    }
+  }
+
+  revalidatePostViews(post.id);
 }

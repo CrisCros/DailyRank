@@ -36,7 +36,7 @@ export default async function FeedPage() {
 
   const isFeedUnlocked = todaysOwnPost !== null;
 
-  const posts: PostCardPost[] = isFeedUnlocked
+  const feedPosts = isFeedUnlocked
     ? await prisma.post.findMany({
         where: {
           date: todayFilter,
@@ -51,6 +51,14 @@ export default async function FeedPage() {
           description: true,
           mood: true,
           visibility: true,
+          _count: {
+            select: { likes: true },
+          },
+          likes: {
+            where: { userId: session.user.id },
+            select: { id: true },
+            take: 1,
+          },
           user: {
             select: {
               name: true,
@@ -60,6 +68,19 @@ export default async function FeedPage() {
         },
       })
     : [];
+
+  const posts: PostCardPost[] = feedPosts.map((post) => ({
+    id: post.id,
+    date: post.date,
+    rating: post.rating,
+    title: post.title,
+    description: post.description,
+    mood: post.mood,
+    visibility: post.visibility,
+    user: post.user,
+    likesCount: post._count.likes,
+    isLikedByCurrentUser: post.likes.length > 0,
+  }));
 
   const lockedPosts: LockedPostCardPost[] = isFeedUnlocked
     ? []

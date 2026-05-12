@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Eye, LockKeyhole, UserRound } from "lucide-react";
 import type { PostMood, PostVisibility } from "@prisma/client";
 
+import { toggleLikeAction } from "@/app/actions/posts";
+import { LikeButton } from "@/components/like-button";
 import { formatLongDate } from "@/lib/dates";
 import { formatRating } from "@/lib/ratings";
 import { moodLabels, visibilityLabels } from "@/validations/posts";
@@ -24,6 +26,8 @@ export type PostCardPost = {
   mood: PostMood | null;
   visibility: PostVisibility;
   user: PostAuthor;
+  likesCount: number;
+  isLikedByCurrentUser: boolean;
 };
 
 export type LockedPostCardPost = {
@@ -55,6 +59,8 @@ function PostAuthorHeader({ user }: { user: PostAuthor }) {
 }
 
 export function PostCard({ post }: PostCardProps) {
+  const likeAction = toggleLikeAction.bind(null, post.id);
+
   return (
     <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl shadow-slate-950/5 transition hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-950/10 dark:border-slate-800 dark:bg-slate-950 dark:shadow-black/20">
       <div className="space-y-5 p-6">
@@ -94,12 +100,15 @@ export function PostCard({ post }: PostCardProps) {
           </div>
         </div>
 
-        <Link
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
-          href={`/posts/${post.id}`}
-        >
-          Ver detalle <ArrowRight className="size-4" />
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <LikeButton action={likeAction} isLikedByCurrentUser={post.isLikedByCurrentUser} likesCount={post.likesCount} />
+          <Link
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
+            href={`/posts/${post.id}`}
+          >
+            Ver detalle <ArrowRight className="size-4" />
+          </Link>
+        </div>
       </div>
     </article>
   );
