@@ -14,7 +14,7 @@ function encodeMessage(message: string) {
   return encodeURIComponent(message);
 }
 
-function settingsRedirect(type: "error" | "success", message: string) {
+function settingsRedirect(type: "error" | "success", message: string): never {
   return redirect(`/settings?${type}=${encodeMessage(message)}`);
 }
 

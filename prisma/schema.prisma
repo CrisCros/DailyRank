@@ -21,18 +21,38 @@ model User {
   accounts      Account[]
   sessions      Session[]
   settings      UserSettings?
+  posts         Post[]
 
   @@index([name])
   @@index([username])
 }
 
+model Post {
+  id          String         @id @default(cuid())
+  userId      String
+  date        DateTime       @db.Date
+  rating      Decimal        @db.Decimal(4, 2)
+  title       String         @db.VarChar(120)
+  description String?        @db.Text
+  mood        PostMood?
+  visibility  PostVisibility @default(PRIVATE)
+  photoUrl    String?        @db.VarChar(2048)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+  @@index([visibility])
+}
+
 model UserSettings {
-  id        String      @id @default(cuid())
-  userId    String      @unique
-  theme     ThemeMode   @default(LIGHT)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  theme     ThemeMode @default(LIGHT)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {
@@ -73,4 +93,21 @@ enum ThemeMode {
   LIGHT
   DARK
   SYSTEM
+}
+
+enum PostMood {
+  HAPPY
+  TIRED
+  PRODUCTIVE
+  STRESSED
+  CALM
+  MOTIVATED
+  BAD_DAY
+  NORMAL_DAY
+}
+
+enum PostVisibility {
+  PRIVATE
+  FRIENDS
+  PUBLIC
 }
