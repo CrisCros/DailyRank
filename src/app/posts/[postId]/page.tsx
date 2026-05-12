@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { MessageCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { notFound, redirect } from "next/navigation";
 
@@ -18,191 +18,116 @@ import { moodLabels, visibilityLabels } from "@/validations/posts";
 
 type PostDetailPageProps = {
   params: Promise<{ postId: string }>;
-  searchParams: Promise<{
-    error?: string;
-    success?: string;
-  }>;
+  searchParams: Promise<{ error?: string; success?: string }>;
 };
 
 export default async function PostDetailPage({ params, searchParams }: PostDetailPageProps) {
   const [session, routeParams, query] = await Promise.all([getServerSession(authOptions), params, searchParams]);
 
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
+  if (!session?.user?.id) redirect("/login");
 
-  const post = await prisma.post.findFirst({
-    where: {
-      id: routeParams.postId,
-      ...visiblePostWhere(session.user.id),
-    },
-    include: {
-      _count: {
-        select: { likes: true, comments: true },
-      },
-      likes: {
-        where: { userId: session.user.id },
-        select: { id: true },
-        take: 1,
-      },
-      comments: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          content: true,
-          createdAt: true,
-          userId: true,
-          user: {
-            select: {
-              name: true,
-              username: true,
-            },
-          },
+  const [post, unreadNotificationsCount] = await Promise.all([
+    prisma.post.findFirst({
+      where: { id: routeParams.postId, ...visiblePostWhere(session.user.id) },
+      include: {
+        _count: { select: { likes: true, comments: true } },
+        likes: { where: { userId: session.user.id }, select: { id: true }, take: 1 },
+        comments: {
+          orderBy: { createdAt: "asc" },
+          select: { id: true, content: true, createdAt: true, userId: true, user: { select: { name: true, username: true } } },
         },
+        user: { select: { name: true, username: true } },
       },
-      user: {
-        select: {
-          name: true,
-          username: true,
-        },
-      },
-    },
-  });
+    }),
+    prisma.notification.count({ where: { recipientId: session.user.id, readAt: null } }),
+  ]);
 
-  if (!post) {
-    notFound();
-  }
+  if (!post) notFound();
 
   const isOwner = post.userId === session.user.id;
   const likeAction = toggleLikeAction.bind(null, post.id);
   const commentAction = createCommentAction.bind(null, post.id);
 
   return (
-    <AppShell>
-      <section className="mx-auto max-w-3xl space-y-6">
+    <AppShell unreadNotificationsCount={unreadNotificationsCount}>
+      <section className="mx-auto max-w-2xl space-y-5">
         <Notice error={query.error} success={query.success} />
 
-        <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950">
-          <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 p-6 text-white">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-100">Publicación diaria</p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight">{post.title}</h1>
-            <p className="mt-2 text-indigo-100">{formatLongDate(post.date)}</p>
-            <p className="mt-4 text-sm font-semibold text-indigo-50">
-              {post.user.name} · @{post.user.username}
-            </p>
-          </div>
-
-          <div className="space-y-6 p-6">
-            <div className="grid gap-3 sm:grid-cols-4">
-              <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Nota</p>
-                <p className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{formatRating(post.rating)}/10</p>
+        <article className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950">
+          <div className="space-y-5 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-lg font-black text-white">{post.user.name.charAt(0).toUpperCase()}</div>
+                <div className="min-w-0">
+                  <p className="truncate font-black text-slate-950 dark:text-white">{post.user.name}</p>
+                  <p className="truncate text-sm text-slate-500 dark:text-slate-400">@{post.user.username} · {formatDateTime(post.createdAt)}</p>
+                </div>
               </div>
-              <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Estado</p>
-                <p className="mt-2 font-bold text-slate-950 dark:text-white">{post.mood ? moodLabels[post.mood] : "Sin estado"}</p>
-              </div>
-              <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Visibilidad</p>
-                <p className="mt-2 font-bold text-slate-950 dark:text-white">{visibilityLabels[post.visibility]}</p>
-              </div>
-              <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Interacción</p>
-                <p className="mt-2 font-bold text-slate-950 dark:text-white">{post._count.likes} likes · {post._count.comments} comentarios</p>
-              </div>
-            </div>
 
-            <div>
-              <h2 className="font-bold text-slate-950 dark:text-white">Descripción</h2>
-              <p className="mt-3 whitespace-pre-wrap leading-7 text-slate-600 dark:text-slate-300">
-                {post.description ?? "Sin descripción para este día."}
-              </p>
-            </div>
-
-            <PostPhoto className="min-h-80" photoUrl={post.photoUrl} title={post.title} />
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <LikeButton action={likeAction} isLikedByCurrentUser={post.likes.length > 0} likesCount={post._count.likes} />
               {isOwner ? (
-                <>
-                  <Link className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500" href={`/posts/${post.id}/edit`}>
-                    <Pencil className="size-4" /> Editar
-                  </Link>
-                  <form action={deletePostAction} className="sm:min-w-44">
-                    <input name="postId" type="hidden" value={post.id} />
-                    <SubmitButton pendingText="Borrando...">Borrar</SubmitButton>
-                  </form>
-                </>
+                <details className="relative shrink-0">
+                  <summary className="flex size-10 cursor-pointer list-none items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-900" aria-label="Opciones de publicación">
+                    <MoreHorizontal className="size-5 text-slate-600 dark:text-slate-300" />
+                  </summary>
+                  <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-800 dark:bg-slate-950">
+                    <Link className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900" href={`/posts/${post.id}/edit`}><Pencil className="size-4" /> Editar</Link>
+                    <form action={deletePostAction}>
+                      <input name="postId" type="hidden" value={post.id} />
+                      <button className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-50 dark:text-rose-200 dark:hover:bg-rose-950/40" type="submit"><Trash2 className="size-4" /> Borrar</button>
+                    </form>
+                  </div>
+                </details>
               ) : null}
-              <Link className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 dark:border-slate-800 dark:text-slate-200" href={isOwner ? "/day" : "/feed"}>
-                Volver a {isOwner ? "Mi día" : "Feed"}
-              </Link>
             </div>
-          </div>
-        </article>
 
-        <section className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950">
-          <div className="flex items-center justify-between gap-4">
+            <PostPhoto photoUrl={post.photoUrl} title={post.title} />
+
             <div>
-              <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-300">
-                <MessageCircle className="size-4" /> Comentarios
-              </p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{post._count.comments} en esta publicación</h2>
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400">
+                <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-900">{formatLongDate(post.date)}</span>
+                <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-900">{visibilityLabels[post.visibility]}</span>
+                <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-900">{post.mood ? moodLabels[post.mood] : "Sin estado"}</span>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">{post.title}</h1>
+                  <p className="mt-3 whitespace-pre-wrap leading-7 text-slate-600 dark:text-slate-300">{post.description ?? "Sin descripción para este día."}</p>
+                </div>
+                <div className="flex size-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/50"><span className="text-2xl font-black text-indigo-600 dark:text-indigo-300">{formatRating(post.rating)}</span><span className="text-[0.65rem] font-bold text-slate-500 dark:text-slate-400">/10</span></div>
+              </div>
             </div>
-          </div>
 
-          <form action={commentAction} className="space-y-3 rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200" htmlFor="content">
-              Añadir comentario
-            </label>
-            <textarea
-              className="min-h-28 w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-500 dark:focus:ring-indigo-950"
-              id="content"
-              maxLength={500}
-              name="content"
-              placeholder="Escribe algo útil, amable o curioso..."
-              required
-            />
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Máximo 500 caracteres.</p>
-            <SubmitButton pendingText="Publicando...">Publicar comentario</SubmitButton>
-          </form>
+            <div className="flex items-center gap-2 border-y border-slate-100 py-2 dark:border-slate-800">
+              <LikeButton action={likeAction} isLikedByCurrentUser={post.likes.length > 0} likesCount={post._count.likes} />
+              <a className="inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-black text-slate-600 dark:text-slate-300" href="#comments"><MessageCircle className="size-6" /> {post._count.comments}</a>
+            </div>
 
-          {post.comments.length > 0 ? (
-            <div className="space-y-3">
-              {post.comments.map((comment) => {
-                const canDeleteComment = comment.userId === session.user.id || isOwner;
-                const deleteAction = deleteCommentAction.bind(null, comment.id);
+            <section className="space-y-4" id="comments">
+              <h2 className="flex items-center gap-2 text-xl font-black text-slate-950 dark:text-white"><MessageCircle className="size-5" /> Comentarios</h2>
+              <form action={commentAction} className="space-y-3">
+                <textarea className="min-h-28 w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:ring-indigo-950" maxLength={500} name="content" placeholder="Escribe un comentario..." required />
+                <div className="sm:max-w-48"><SubmitButton pendingText="Publicando...">Comentar</SubmitButton></div>
+              </form>
 
-                return (
-                  <article key={comment.id} className="rounded-3xl border border-slate-200 p-4 dark:border-slate-800">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="font-bold text-slate-950 dark:text-white">{comment.user.name}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">@{comment.user.username} · {formatDateTime(comment.createdAt)}</p>
-                      </div>
-                      {canDeleteComment ? (
-                        <form action={deleteAction}>
-                          <button
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 px-3 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-50 dark:border-rose-900/70 dark:text-rose-200 dark:hover:bg-rose-950/40"
-                            type="submit"
-                          >
-                            <Trash2 className="size-4" /> Borrar
-                          </button>
+              <div className="space-y-3">
+                {post.comments.length === 0 ? <p className="rounded-3xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Todavía no hay comentarios.</p> : null}
+                {post.comments.map((comment) => (
+                  <article className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900/70" key={comment.id}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div><p className="font-black text-slate-950 dark:text-white">{comment.user.name}</p><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">@{comment.user.username} · {formatDateTime(comment.createdAt)}</p></div>
+                      {comment.userId === session.user.id ? (
+                        <form action={deleteCommentAction.bind(null, comment.id)}>
+                          <button className="rounded-full p-2 text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/40" type="submit" aria-label="Borrar comentario"><Trash2 className="size-4" /></button>
                         </form>
                       ) : null}
                     </div>
-                    <p className="mt-3 whitespace-pre-wrap leading-7 text-slate-600 dark:text-slate-300">{comment.content}</p>
+                    <p className="mt-3 whitespace-pre-wrap leading-7 text-slate-700 dark:text-slate-200">{comment.content}</p>
                   </article>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-3xl border border-dashed border-slate-300 p-5 text-center dark:border-slate-700">
-              <p className="font-bold text-slate-950 dark:text-white">Todavía no hay comentarios.</p>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Sé la primera persona en comentar esta publicación visible.</p>
-            </div>
-          )}
-        </section>
+                ))}
+              </div>
+            </section>
+          </div>
+        </article>
       </section>
     </AppShell>
   );

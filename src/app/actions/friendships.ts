@@ -31,6 +31,8 @@ async function getRequiredUserId() {
 function revalidateFriendshipViews() {
   revalidatePath("/friends");
   revalidatePath("/feed");
+  revalidatePath("/profile");
+  revalidatePath("/notifications");
 }
 
 export async function sendFriendRequestAction(formData: FormData) {
@@ -71,26 +73,33 @@ export async function sendFriendRequestAction(formData: FormData) {
   }
 
   try {
-    if (existing?.status === "REJECTED") {
-      await prisma.friendship.update({
-        where: { id: existing.id },
-        data: {
-          requesterId,
-          receiverId,
-          status: "PENDING",
-        },
-        select: { id: true },
-      });
-    } else {
-      await prisma.friendship.create({
-        data: {
-          requesterId,
-          receiverId,
-          pairKey,
-        },
-        select: { id: true },
-      });
-    }
+    const friendship = existing?.status === "REJECTED"
+      ? await prisma.friendship.update({
+          where: { id: existing.id },
+          data: {
+            requesterId,
+            receiverId,
+            status: "PENDING",
+          },
+          select: { id: true },
+        })
+      : await prisma.friendship.create({
+          data: {
+            requesterId,
+            receiverId,
+            pairKey,
+          },
+          select: { id: true },
+        });
+
+    await prisma.notification.create({
+      data: {
+        recipientId: receiverId,
+        actorId: requesterId,
+        type: "FRIEND_REQUEST_RECEIVED",
+        friendshipId: friendship.id,
+      },
+    });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       friendsRedirect("error", "Ya existe una relación o solicitud entre ambos usuarios.");
@@ -111,9 +120,22 @@ export async function acceptFriendRequestAction(formData: FormData) {
     friendsRedirect("error", parsedFriendshipId.error.issues[0]?.message ?? "La solicitud no es válida.");
   }
 
-  const result = await prisma.friendship.updateMany({
+  const friendship = await prisma.friendship.findFirst({
     where: {
       id: parsedFriendshipId.data,
+      receiverId,
+      status: "PENDING",
+    },
+    select: { id: true, requesterId: true },
+  });
+
+  if (!friendship) {
+    friendsRedirect("error", "Solo el receptor puede aceptar una solicitud pendiente.");
+  }
+
+  const result = await prisma.friendship.updateMany({
+    where: {
+      id: friendship.id,
       receiverId,
       status: "PENDING",
     },
@@ -123,6 +145,15 @@ export async function acceptFriendRequestAction(formData: FormData) {
   if (result.count === 0) {
     friendsRedirect("error", "Solo el receptor puede aceptar una solicitud pendiente.");
   }
+
+  await prisma.notification.create({
+    data: {
+      recipientId: friendship.requesterId,
+      actorId: receiverId,
+      type: "FRIEND_REQUEST_ACCEPTED",
+      friendshipId: friendship.id,
+    },
+  });
 
   revalidateFriendshipViews();
   friendsRedirect("success", "Solicitud aceptada. Ya sois amigos.");

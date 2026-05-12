@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Lock, Smartphone, Users, type LucideIcon } from "lucide-react";
 import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 
 import { authOptions } from "@/auth";
 import { Brand } from "@/components/brand";
@@ -14,15 +15,19 @@ const featureCards: Array<{ icon: LucideIcon; title: string; text: string }> = [
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
 
+  if (session?.user?.id) {
+    redirect("/feed");
+  }
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6">
       <header className="flex items-center justify-between gap-4">
         <Brand />
         <Link
           className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold !text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-white dark:!text-slate-950 dark:hover:bg-slate-200"
-          href={session ? "/dashboard" : "/login"}
+          href="/login"
         >
-          {session ? "Entrar" : "Login"}
+          Login
         </Link>
       </header>
 

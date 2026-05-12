@@ -4,7 +4,7 @@ type PostPhotoProps = {
   className?: string;
 };
 
-export function PostPhoto({ className = "min-h-64", photoUrl, title }: PostPhotoProps) {
+export function PostPhoto({ className = "", photoUrl, title }: PostPhotoProps) {
   if (!photoUrl) {
     return null;
   }
@@ -12,7 +12,7 @@ export function PostPhoto({ className = "min-h-64", photoUrl, title }: PostPhoto
   return (
     <div
       aria-label={`Foto de ${title}`}
-      className={`${className} rounded-[1.75rem] border border-slate-200 bg-slate-100 bg-cover bg-center bg-no-repeat shadow-inner dark:border-slate-800 dark:bg-slate-900`}
+      className={`${className} aspect-square w-full rounded-[1.5rem] border border-slate-200 bg-slate-100 bg-cover bg-center bg-no-repeat shadow-inner dark:border-slate-800 dark:bg-slate-900`}
       role="img"
       style={{ backgroundImage: `url(${photoUrl})` }}
     />
