@@ -61,6 +61,7 @@ export async function createPostAction(formData: FormData) {
     });
 
     revalidatePath("/day");
+    revalidatePath("/feed");
     revalidatePath("/dashboard");
     redirect(`/posts/${post.id}?success=${encodeMessage("Tu día se ha guardado correctamente.")}`);
   } catch (error) {
@@ -104,6 +105,7 @@ export async function updatePostAction(formData: FormData) {
   }
 
   revalidatePath("/day");
+  revalidatePath("/feed");
   revalidatePath(`/posts/${postId}`);
   redirect(`/posts/${postId}?success=${encodeMessage("Publicación actualizada correctamente.")}`);
 }
@@ -125,6 +127,7 @@ export async function deletePostAction(formData: FormData) {
   }
 
   revalidatePath("/day");
+  revalidatePath("/feed");
   revalidatePath("/dashboard");
   redirect(`/day?success=${encodeMessage("Publicación borrada correctamente.")}`);
 }

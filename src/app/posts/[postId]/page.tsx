@@ -29,12 +29,25 @@ export default async function PostDetailPage({ params, searchParams }: PostDetai
   }
 
   const post = await prisma.post.findFirst({
-    where: { id: routeParams.postId, userId: session.user.id },
+    where: {
+      id: routeParams.postId,
+      OR: [{ userId: session.user.id }, { visibility: "PUBLIC" }],
+    },
+    include: {
+      user: {
+        select: {
+          name: true,
+          username: true,
+        },
+      },
+    },
   });
 
   if (!post) {
     notFound();
   }
+
+  const isOwner = post.userId === session.user.id;
 
   return (
     <AppShell>
@@ -46,6 +59,9 @@ export default async function PostDetailPage({ params, searchParams }: PostDetai
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-100">Publicación diaria</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight">{post.title}</h1>
             <p className="mt-2 text-indigo-100">{formatLongDate(post.date)}</p>
+            <p className="mt-4 text-sm font-semibold text-indigo-50">
+              {post.user.name} · @{post.user.username}
+            </p>
           </div>
 
           <div className="space-y-6 p-6">
@@ -76,15 +92,19 @@ export default async function PostDetailPage({ params, searchParams }: PostDetai
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500" href={`/posts/${post.id}/edit`}>
-                <Pencil className="size-4" /> Editar
-              </Link>
-              <form action={deletePostAction} className="sm:min-w-44">
-                <input name="postId" type="hidden" value={post.id} />
-                <SubmitButton pendingText="Borrando...">Borrar</SubmitButton>
-              </form>
-              <Link className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 dark:border-slate-800 dark:text-slate-200" href="/day">
-                Volver a Mi día
+              {isOwner ? (
+                <>
+                  <Link className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500" href={`/posts/${post.id}/edit`}>
+                    <Pencil className="size-4" /> Editar
+                  </Link>
+                  <form action={deletePostAction} className="sm:min-w-44">
+                    <input name="postId" type="hidden" value={post.id} />
+                    <SubmitButton pendingText="Borrando...">Borrar</SubmitButton>
+                  </form>
+                </>
+              ) : null}
+              <Link className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 dark:border-slate-800 dark:text-slate-200" href={isOwner ? "/day" : "/feed"}>
+                Volver a {isOwner ? "Mi día" : "Feed"}
               </Link>
             </div>
           </div>
