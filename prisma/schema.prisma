@@ -23,6 +23,7 @@ model User {
   settings      UserSettings?
   posts         Post[]
   likes         Like[]
+  comments      Comment[]
 
   @@index([name])
   @@index([username])
@@ -42,6 +43,7 @@ model Post {
   updatedAt   DateTime       @updatedAt
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes       Like[]
+  comments    Comment[]
 
   @@unique([userId, date])
   @@index([date])
@@ -61,6 +63,21 @@ model Like {
   @@index([postId])
   @@index([postId, createdAt])
   @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.VarChar(500)
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model UserSettings {
