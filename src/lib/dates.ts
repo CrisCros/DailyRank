@@ -18,3 +18,15 @@ export function formatLongDate(date: Date) {
     timeZone: "UTC",
   }).format(date);
 }
+
+
+export function formatDateTime(date: Date) {
+  return new Intl.DateTimeFormat("es", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(date);
+}

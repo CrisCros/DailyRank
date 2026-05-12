@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/auth";
 import { startOfTodayUtc } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
+import { commentContentSchema, commentIdSchema } from "@/validations/comments";
 import { postIdSchema } from "@/validations/likes";
 import { postSchema } from "@/validations/posts";
 
@@ -190,4 +191,88 @@ export async function toggleLikeAction(postId: string) {
   }
 
   revalidatePostViews(post.id);
+}
+
+
+export async function createCommentAction(postId: string, formData: FormData) {
+  const userId = await getRequiredUserId();
+  const parsedPostId = postIdSchema.safeParse(postId);
+
+  if (!parsedPostId.success) {
+    throw new Error(parsedPostId.error.issues[0]?.message ?? "La publicación no es válida.");
+  }
+
+  const parsedContent = commentContentSchema.safeParse({
+    content: formData.get("content"),
+  });
+
+  if (!parsedContent.success) {
+    postRedirect(`/posts/${parsedPostId.data}`, "error", parsedContent.error.issues[0]?.message ?? "Revisa el comentario.");
+  }
+
+  const post = await prisma.post.findUnique({
+    where: { id: parsedPostId.data },
+    select: {
+      id: true,
+      userId: true,
+      visibility: true,
+    },
+  });
+
+  if (!post || !canViewPost(userId, post)) {
+    throw new Error("No puedes comentar en una publicación que no puedes ver.");
+  }
+
+  await prisma.comment.create({
+    data: {
+      content: parsedContent.data.content,
+      postId: post.id,
+      userId,
+    },
+    select: { id: true },
+  });
+
+  revalidatePostViews(post.id);
+  redirect(`/posts/${post.id}?success=${encodeMessage("Comentario publicado correctamente.")}`);
+}
+
+export async function deleteCommentAction(commentId: string) {
+  const userId = await getRequiredUserId();
+  const parsedCommentId = commentIdSchema.safeParse(commentId);
+
+  if (!parsedCommentId.success) {
+    throw new Error(parsedCommentId.error.issues[0]?.message ?? "El comentario no es válido.");
+  }
+
+  const comment = await prisma.comment.findUnique({
+    where: { id: parsedCommentId.data },
+    select: {
+      id: true,
+      userId: true,
+      post: {
+        select: {
+          id: true,
+          userId: true,
+        },
+      },
+    },
+  });
+
+  if (!comment) {
+    throw new Error("No se encontró el comentario que quieres borrar.");
+  }
+
+  const canDelete = comment.userId === userId || comment.post.userId === userId;
+
+  if (!canDelete) {
+    throw new Error("No puedes borrar este comentario.");
+  }
+
+  await prisma.comment.delete({
+    where: { id: comment.id },
+    select: { id: true },
+  });
+
+  revalidatePostViews(comment.post.id);
+  redirect(`/posts/${comment.post.id}?success=${encodeMessage("Comentario borrado correctamente.")}`);
 }

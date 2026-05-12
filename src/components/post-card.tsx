@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Eye, LockKeyhole, UserRound } from "lucide-react";
+import { ArrowRight, CalendarDays, Eye, LockKeyhole, MessageCircle, UserRound } from "lucide-react";
 import type { PostMood, PostVisibility } from "@prisma/client";
 
 import { toggleLikeAction } from "@/app/actions/posts";
@@ -27,6 +27,7 @@ export type PostCardPost = {
   visibility: PostVisibility;
   user: PostAuthor;
   likesCount: number;
+  commentsCount: number;
   isLikedByCurrentUser: boolean;
 };
 
@@ -102,6 +103,10 @@ export function PostCard({ post }: PostCardProps) {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <LikeButton action={likeAction} isLikedByCurrentUser={post.isLikedByCurrentUser} likesCount={post.likesCount} />
+          <div className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+            <MessageCircle className="size-4" /> Comentarios
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-900">{post.commentsCount}</span>
+          </div>
           <Link
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
             href={`/posts/${post.id}`}

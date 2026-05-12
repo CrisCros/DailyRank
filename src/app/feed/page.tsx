@@ -52,7 +52,7 @@ export default async function FeedPage() {
           mood: true,
           visibility: true,
           _count: {
-            select: { likes: true },
+            select: { likes: true, comments: true },
           },
           likes: {
             where: { userId: session.user.id },
@@ -79,6 +79,7 @@ export default async function FeedPage() {
     visibility: post.visibility,
     user: post.user,
     likesCount: post._count.likes,
+    commentsCount: post._count.comments,
     isLikedByCurrentUser: post.likes.length > 0,
   }));
 
