@@ -8,6 +8,7 @@ import { authOptions } from "@/auth";
 import { AppShell } from "@/components/app-shell";
 import { LikeButton } from "@/components/like-button";
 import { Notice } from "@/components/notice";
+import { PostPhoto } from "@/components/post-photo";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDateTime, formatLongDate } from "@/lib/dates";
 import { visiblePostWhere } from "@/lib/friendships";
@@ -118,9 +119,7 @@ export default async function PostDetailPage({ params, searchParams }: PostDetai
               </p>
             </div>
 
-            <div className="rounded-3xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              Foto opcional preparada para integrarse en una fase posterior. {post.photoUrl ? "Hay una referencia guardada." : "No hay foto asociada."}
-            </div>
+            <PostPhoto className="min-h-80" photoUrl={post.photoUrl} title={post.title} />
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <LikeButton action={likeAction} isLikedByCurrentUser={post.likes.length > 0} likesCount={post._count.likes} />

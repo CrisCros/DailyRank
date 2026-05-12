@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { authOptions } from "@/auth";
+import { uploadPostPhotoToCloudinary, validatePostPhotoFile } from "@/lib/cloudinary";
 import { startOfTodayUtc } from "@/lib/dates";
 import { canViewPost } from "@/lib/friendships";
 import { prisma } from "@/lib/prisma";
@@ -28,10 +29,46 @@ function getPostInput(formData: FormData) {
     description: formData.get("description"),
     mood: formData.get("mood"),
     visibility: formData.get("visibility"),
-    photoUrl: formData.get("photoUrl"),
   });
 }
 
+function getPostPhotoFile(formData: FormData) {
+  const value = formData.get("photo");
+
+  if (!(value instanceof File) || value.size === 0) {
+    return null;
+  }
+
+  validatePostPhotoFile(value);
+  return value;
+}
+
+function shouldRemovePhoto(formData: FormData) {
+  return formData.get("removePhoto") === "1";
+}
+
+async function getUploadedPhotoUrl(formData: FormData) {
+  const photoFile = getPostPhotoFile(formData);
+
+  if (!photoFile) {
+    return null;
+  }
+
+  const uploadedPhoto = await uploadPostPhotoToCloudinary(photoFile);
+  return uploadedPhoto?.secureUrl ?? null;
+}
+
+async function getUploadedPhotoUrlOrRedirect(formData: FormData, redirectPath: string) {
+  try {
+    return await getUploadedPhotoUrl(formData);
+  } catch (error) {
+    postRedirect(
+      redirectPath,
+      "error",
+      error instanceof Error ? error.message : "No se pudo procesar la foto. Inténtalo de nuevo.",
+    );
+  }
+}
 
 function revalidatePostViews(postId: string) {
   revalidatePath("/feed");
@@ -60,12 +97,14 @@ export async function createPostAction(formData: FormData) {
   }
 
   const date = startOfTodayUtc();
+  const photoUrl = await getUploadedPhotoUrlOrRedirect(formData, "/day/new");
 
   try {
     const post = await prisma.post.create({
       data: {
         ...parsed.data,
         date,
+        photoUrl,
         userId,
       },
       select: { id: true },
@@ -99,6 +138,15 @@ export async function updatePostAction(formData: FormData) {
     postRedirect("/day", "error", "No se encontró la publicación que quieres editar.");
   }
 
+  const post = await prisma.post.findFirst({
+    where: { id: postId, userId },
+    select: { id: true, photoUrl: true },
+  });
+
+  if (!post) {
+    postRedirect("/day", "error", "No puedes editar una publicación que no es tuya.");
+  }
+
   const parsed = getPostInput(formData);
 
   if (!parsed.success) {
@@ -106,14 +154,16 @@ export async function updatePostAction(formData: FormData) {
     postRedirect(`/posts/${postId}/edit`, "error", message);
   }
 
-  const result = await prisma.post.updateMany({
-    where: { id: postId, userId },
-    data: parsed.data,
-  });
+  const uploadedPhotoUrl = await getUploadedPhotoUrlOrRedirect(formData, `/posts/${postId}/edit`);
+  const photoUrl = uploadedPhotoUrl ?? (shouldRemovePhoto(formData) ? null : post.photoUrl);
 
-  if (result.count === 0) {
-    postRedirect("/day", "error", "No puedes editar una publicación que no es tuya.");
-  }
+  await prisma.post.update({
+    where: { id: post.id },
+    data: {
+      ...parsed.data,
+      photoUrl,
+    },
+  });
 
   revalidatePath("/day");
   revalidatePath("/feed");
