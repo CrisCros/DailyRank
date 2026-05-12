@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/auth";
 import { friendshipPairKey } from "@/lib/friendships";
+import { createNotificationAndTrim } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { friendshipIdSchema, userIdSchema } from "@/validations/friendships";
 
@@ -92,13 +93,11 @@ export async function sendFriendRequestAction(formData: FormData) {
           select: { id: true },
         });
 
-    await prisma.notification.create({
-      data: {
-        recipientId: receiverId,
-        actorId: requesterId,
-        type: "FRIEND_REQUEST_RECEIVED",
-        friendshipId: friendship.id,
-      },
+    await createNotificationAndTrim({
+      recipientId: receiverId,
+      actorId: requesterId,
+      type: "FRIEND_REQUEST_RECEIVED",
+      friendshipId: friendship.id,
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -146,13 +145,11 @@ export async function acceptFriendRequestAction(formData: FormData) {
     friendsRedirect("error", "Solo el receptor puede aceptar una solicitud pendiente.");
   }
 
-  await prisma.notification.create({
-    data: {
-      recipientId: friendship.requesterId,
-      actorId: receiverId,
-      type: "FRIEND_REQUEST_ACCEPTED",
-      friendshipId: friendship.id,
-    },
+  await createNotificationAndTrim({
+    recipientId: friendship.requesterId,
+    actorId: receiverId,
+    type: "FRIEND_REQUEST_ACCEPTED",
+    friendshipId: friendship.id,
   });
 
   revalidateFriendshipViews();

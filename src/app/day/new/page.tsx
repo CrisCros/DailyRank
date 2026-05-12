@@ -23,17 +23,20 @@ export default async function NewDayPage({ searchParams }: NewDayPageProps) {
   }
 
   const today = startOfTodayUtc();
-  const existingPost = await prisma.post.findUnique({
+  const [existingPost, notificationsCount] = await Promise.all([
+    prisma.post.findUnique({
     where: { userId_date: { userId: session.user.id, date: today } },
     select: { id: true },
-  });
+  }),
+    prisma.notification.count({ where: { recipientId: session.user.id } }),
+  ]);
 
   if (existingPost) {
     redirect(`/posts/${existingPost.id}/edit?error=${encodeURIComponent("Ya tienes una publicación para hoy. Puedes editarla aquí.")}`);
   }
 
   return (
-    <AppShell>
+    <AppShell unreadNotificationsCount={notificationsCount}>
       <section className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-300">

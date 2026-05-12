@@ -30,7 +30,7 @@ export default async function FeedPage() {
       where: { userId: session.user.id, date: todayFilter },
       select: { id: true, title: true, rating: true, photoUrl: true, createdAt: true },
     }),
-    prisma.notification.count({ where: { recipientId: session.user.id, readAt: null } }),
+    prisma.notification.count({ where: { recipientId: session.user.id } }),
   ]);
 
   const isFeedUnlocked = todaysOwnPost !== null;

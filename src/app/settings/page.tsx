@@ -22,7 +22,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     redirect("/login");
   }
 
-  const user = await prisma.user.findUnique({
+  const [user, notificationsCount] = await Promise.all([
+    prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
       name: true,
@@ -33,7 +34,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         select: { theme: true },
       },
     },
-  });
+  }),
+    prisma.notification.count({ where: { recipientId: session.user.id } }),
+  ]);
 
   if (!user) {
     redirect("/login");
@@ -42,7 +45,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const theme = user.settings?.theme ?? "LIGHT";
 
   return (
-    <AppShell>
+    <AppShell unreadNotificationsCount={notificationsCount}>
       <section className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-300">

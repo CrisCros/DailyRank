@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { Bell, Camera, Home, Search, User } from "lucide-react";
+import { BarChart3, Bell, Camera, Home, Search, User } from "lucide-react";
 
 import { Brand } from "@/components/brand";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ const appNavItems = [
   { href: "/feed", label: "Inicio", icon: Home },
   { href: "/friends", label: "Buscar", icon: Search },
   { href: "/day", label: "Daily", icon: Camera, activePrefixes: ["/day", "/posts"] },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/notifications", label: "Avisos", icon: Bell },
   { href: "/profile", label: "Perfil", icon: User },
 ];
@@ -59,7 +60,7 @@ export function AppShell({ children, unreadNotificationsCount = 0 }: AppShellPro
       {children}
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-2xl shadow-slate-950/10 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+        <div className="mx-auto grid max-w-md grid-cols-6 gap-1">
           {appNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.activePrefixes

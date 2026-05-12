@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { CalendarDays, Mail, Settings, UserRound, Users, UserPlus, Send } from "lucide-react";
+import { BarChart3, CalendarDays, Mail, Settings, UserRound, Users, UserPlus, Send } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
@@ -44,7 +44,7 @@ export default async function ProfilePage() {
       },
       take: 6,
     }),
-    prisma.notification.count({ where: { recipientId: session.user.id, readAt: null } }),
+    prisma.notification.count({ where: { recipientId: session.user.id } }),
   ]);
 
   if (!user) {
@@ -75,7 +75,10 @@ export default async function ProfilePage() {
                 <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">{user.name}</h1>
                 <p className="mt-1 text-slate-600 dark:text-slate-300">@{user.username}</p>
               </div>
-              <LogoutButton />
+              <div className="flex flex-wrap gap-2">
+                <Link className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:text-indigo-300" href="/stats"><BarChart3 className="size-4" /> Ver estadísticas</Link>
+                <LogoutButton />
+              </div>
             </div>
 
             <p className="mt-6 max-w-2xl leading-7 text-slate-600 dark:text-slate-300">{user.bio ?? "Este usuario todavía no ha añadido una biografía."}</p>
