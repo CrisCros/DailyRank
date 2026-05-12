@@ -11,7 +11,7 @@ import { moodLabels, postMoods, postVisibilities, visibilityLabels } from "@/val
 
 type PostFormValues = {
   id?: string;
-  rating?: { toString(): string } | number | string;
+  rating?: number | string;
   title?: string;
   description?: string | null;
   mood?: string | null;

@@ -6,6 +6,12 @@ export type PhotoUploadResult = {
   secureUrl: string;
 };
 
+type CloudinaryErrorPayload = {
+  error?: {
+    message?: unknown;
+  };
+};
+
 export function isImageFile(file: File) {
   return isImageMimeType(file.type);
 }
@@ -14,10 +20,10 @@ function getCloudinaryConfig() {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  const folder = process.env.CLOUDINARY_UPLOAD_FOLDER ?? "dayrank/posts";
+  const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "dayrank/posts";
 
   if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error("Configura CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET para subir fotos.");
+    throw new Error("Cloudinary no está configurado.");
   }
 
   return { apiKey, apiSecret, cloudName, folder };
@@ -30,6 +36,18 @@ function signCloudinaryParams(params: Record<string, string | number>, apiSecret
     .join("&");
 
   return createHash("sha1").update(`${payload}${apiSecret}`).digest("hex");
+}
+
+async function readCloudinaryError(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const payload = (await response.json().catch(() => null)) as CloudinaryErrorPayload | null;
+    const message = payload?.error?.message;
+    return typeof message === "string" && message.length > 0 ? message : JSON.stringify(payload);
+  }
+
+  return response.text().catch(() => "No se pudo leer la respuesta de error de Cloudinary.");
 }
 
 export function validatePostPhotoFile(file: File) {
@@ -71,13 +89,25 @@ export async function uploadPostPhotoToCloudinary(file: File): Promise<PhotoUplo
   });
 
   if (!response.ok) {
+    const cloudinaryMessage = await readCloudinaryError(response);
+
+    console.error("Cloudinary upload failed", {
+      cloudinaryMessage,
+      status: response.status,
+      statusText: response.statusText,
+    });
+
     throw new Error("No se pudo subir la foto a Cloudinary. Inténtalo de nuevo.");
   }
 
   const payload = (await response.json()) as { secure_url?: unknown };
 
   if (typeof payload.secure_url !== "string" || payload.secure_url.length === 0) {
-    throw new Error("Cloudinary no devolvió una URL válida para la foto.");
+    console.error("Cloudinary upload response did not include secure_url", {
+      hasSecureUrl: typeof payload.secure_url === "string",
+    });
+
+    throw new Error("No se pudo subir la foto a Cloudinary. Inténtalo de nuevo.");
   }
 
   return { secureUrl: payload.secure_url };
