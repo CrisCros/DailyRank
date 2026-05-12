@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 import { SubmitButton } from "@/components/submit-button";
+import { ratingInputValue } from "@/lib/ratings";
 import { moodLabels, postMoods, postVisibilities, visibilityLabels } from "@/validations/posts";
 
 type PostFormValues = {
   id?: string;
-  rating?: number;
+  rating?: { toString(): string } | number | string;
   title?: string;
   description?: string | null;
   mood?: string | null;
@@ -24,6 +25,8 @@ const inputClass =
   "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-white";
 
 export function PostForm({ action, cancelHref, mode, post }: PostFormProps) {
+  const ratingValue = post?.rating ? ratingInputValue(post.rating) : "7";
+
   return (
     <form action={action} className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
       {post?.id ? <input name="postId" type="hidden" value={post.id} /> : null}
@@ -33,11 +36,12 @@ export function PostForm({ action, cancelHref, mode, post }: PostFormProps) {
           <span>Nota del día</span>
           <input
             className={inputClass}
-            defaultValue={post?.rating ?? 7}
-            max={10}
-            min={1}
+            defaultValue={ratingValue}
+            max="10"
+            min="1"
             name="rating"
             required
+            step="0.01"
             type="number"
           />
         </label>

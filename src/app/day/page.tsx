@@ -8,6 +8,7 @@ import { AppShell } from "@/components/app-shell";
 import { Notice } from "@/components/notice";
 import { formatLongDate, startOfTodayUtc } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
+import { formatRating } from "@/lib/ratings";
 import { moodLabels, visibilityLabels } from "@/validations/posts";
 
 type DayPageProps = {
@@ -51,7 +52,7 @@ export default async function DayPage({ searchParams }: DayPageProps) {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-sm font-bold text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-200">
-                  Nota {post.rating}/10
+                  Nota {formatRating(post.rating)}/10
                 </div>
                 <h2 className="mt-4 text-2xl font-black text-slate-950 dark:text-white">{post.title}</h2>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">

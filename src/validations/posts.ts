@@ -49,12 +49,17 @@ const optionalPhotoUrlSchema = z
   .optional()
   .transform((value) => (value ? value : null));
 
+const ratingSchema = z
+  .string({ message: "La nota del día es obligatoria." })
+  .trim()
+  .min(1, "La nota del día es obligatoria.")
+  .regex(/^\d+(?:\.\d{1,2})?$/, "La nota debe ser numérica y tener como máximo 2 decimales.")
+  .transform((value) => Number(value))
+  .refine((value) => value >= 1, "La nota mínima es 1.")
+  .refine((value) => value <= 10, "La nota máxima es 10.");
+
 export const postSchema = z.object({
-  rating: z.coerce
-    .number({ message: "La nota del día es obligatoria." })
-    .int("La nota debe ser un número entero.")
-    .min(1, "La nota mínima es 1.")
-    .max(10, "La nota máxima es 10."),
+  rating: ratingSchema,
   title: z
     .string()
     .trim()

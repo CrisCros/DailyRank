@@ -10,6 +10,7 @@ import { Notice } from "@/components/notice";
 import { SubmitButton } from "@/components/submit-button";
 import { formatLongDate } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
+import { formatRating } from "@/lib/ratings";
 import { moodLabels, visibilityLabels } from "@/validations/posts";
 
 type PostDetailPageProps = {
@@ -51,7 +52,7 @@ export default async function PostDetailPage({ params, searchParams }: PostDetai
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Nota</p>
-                <p className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{post.rating}/10</p>
+                <p className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{formatRating(post.rating)}/10</p>
               </div>
               <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Estado</p>
