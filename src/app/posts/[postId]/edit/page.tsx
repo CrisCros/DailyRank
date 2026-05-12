@@ -23,7 +23,8 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
     redirect("/login");
   }
 
-  const post = await prisma.post.findFirst({
+  const [post, notificationsCount] = await Promise.all([
+    prisma.post.findFirst({
     where: { id: routeParams.postId, userId: session.user.id },
     select: {
       id: true,
@@ -35,14 +36,16 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
       visibility: true,
       photoUrl: true,
     },
-  });
+  }),
+    prisma.notification.count({ where: { recipientId: session.user.id } }),
+  ]);
 
   if (!post) {
     notFound();
   }
 
   return (
-    <AppShell>
+    <AppShell unreadNotificationsCount={notificationsCount}>
       <section className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-300">

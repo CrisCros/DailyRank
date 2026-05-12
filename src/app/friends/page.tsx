@@ -59,7 +59,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
   const searchTerm = query.q?.trim() ?? "";
   const currentUserId = session.user.id;
 
-  const [incomingRequests, outgoingRequests, acceptedFriendships, searchResults] = await Promise.all([
+  const [incomingRequests, outgoingRequests, acceptedFriendships, searchResults, notificationsCount] = await Promise.all([
     prisma.friendship.findMany({
       where: { receiverId: currentUserId, status: "PENDING" },
       orderBy: { createdAt: "desc" },
@@ -110,6 +110,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
           select: { id: true, name: true, username: true },
         })
       : Promise.resolve([]),
+    prisma.notification.count({ where: { recipientId: currentUserId } }),
   ]);
 
   const pairKeys = searchResults.map((user) => friendshipPairKey(currentUserId, user.id));
@@ -127,7 +128,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
   }));
 
   return (
-    <AppShell>
+    <AppShell unreadNotificationsCount={notificationsCount}>
       <section className="space-y-6">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950">
           <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-300">

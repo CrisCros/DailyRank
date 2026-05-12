@@ -29,7 +29,8 @@ export default async function DayPage({ searchParams }: DayPageProps) {
   }
 
   const today = startOfTodayUtc();
-  const post = await prisma.post.findUnique({
+  const [post, notificationsCount] = await Promise.all([
+    prisma.post.findUnique({
     where: { userId_date: { userId: session.user.id, date: today } },
     include: {
       _count: {
@@ -41,12 +42,14 @@ export default async function DayPage({ searchParams }: DayPageProps) {
         take: 1,
       },
     },
-  });
+  }),
+    prisma.notification.count({ where: { recipientId: session.user.id } }),
+  ]);
 
   const likeAction = post ? toggleLikeAction.bind(null, post.id) : null;
 
   return (
-    <AppShell>
+    <AppShell unreadNotificationsCount={notificationsCount}>
       <section className="mx-auto max-w-3xl space-y-6">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-300">

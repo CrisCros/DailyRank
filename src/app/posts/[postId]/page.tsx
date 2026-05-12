@@ -39,7 +39,7 @@ export default async function PostDetailPage({ params, searchParams }: PostDetai
         user: { select: { name: true, username: true } },
       },
     }),
-    prisma.notification.count({ where: { recipientId: session.user.id, readAt: null } }),
+    prisma.notification.count({ where: { recipientId: session.user.id } }),
   ]);
 
   if (!post) notFound();
