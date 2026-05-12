@@ -5,6 +5,7 @@ import type { PostMood, PostVisibility } from "@prisma/client";
 import { toggleLikeAction } from "@/app/actions/posts";
 import { LikeButton } from "@/components/like-button";
 import { PostPhoto } from "@/components/post-photo";
+import { UserAvatar } from "@/components/user-avatar";
 import { formatLongDate } from "@/lib/dates";
 import { formatRating } from "@/lib/ratings";
 import { moodLabels, visibilityLabels } from "@/validations/posts";
@@ -16,6 +17,7 @@ type FormattableRating = {
 type PostAuthor = {
   name: string;
   username: string;
+  image: string | null;
 };
 
 export type PostCardPost = {
@@ -50,12 +52,18 @@ type LockedPostCardProps = {
 function PostAuthorHeader({ date, user }: { date?: Date; user: PostAuthor }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex size-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-base font-black text-white">
-        {user.name.charAt(0).toUpperCase()}
-      </div>
+      <UserAvatar user={user} />
       <div className="min-w-0">
-        <p className="truncate font-bold text-slate-950 dark:text-white">{user.name}</p>
-        <p className="truncate text-sm text-slate-500 dark:text-slate-400">@{user.username}{date ? ` · ${formatLongDate(date)}` : ""}</p>
+        <Link
+          className="truncate font-bold text-slate-950 hover:text-indigo-600 dark:text-white dark:hover:text-indigo-300"
+          href={`/users/${user.username}`}
+        >
+          {user.name}
+        </Link>
+        <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+          @{user.username}
+          {date ? ` · ${formatLongDate(date)}` : ""}
+        </p>
       </div>
     </div>
   );
@@ -66,7 +74,11 @@ export function PostCard({ post }: PostCardProps) {
 
   return (
     <article className="group relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-950/5 transition hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-950/10 dark:border-slate-800 dark:bg-slate-950 dark:shadow-black/20">
-      <Link aria-label={`Abrir publicación de ${post.user.username}: ${post.title}`} className="absolute inset-0 z-10" href={`/posts/${post.id}`} />
+      <Link
+        aria-label={`Abrir publicación de ${post.user.username}: ${post.title}`}
+        className="absolute inset-0 z-10"
+        href={`/posts/${post.id}`}
+      />
 
       <div className="pointer-events-none relative z-20 space-y-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
@@ -87,23 +99,38 @@ export function PostCard({ post }: PostCardProps) {
                 </span>
               ) : null}
             </div>
-            <h2 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">{post.title}</h2>
-            {post.description ? <p className="mt-2 line-clamp-3 whitespace-pre-wrap leading-7 text-slate-600 dark:text-slate-300">{post.description}</p> : null}
+            <h2 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">
+              {post.title}
+            </h2>
+            {post.description ? (
+              <p className="mt-2 line-clamp-3 whitespace-pre-wrap leading-7 text-slate-600 dark:text-slate-300">
+                {post.description}
+              </p>
+            ) : null}
           </div>
           <div className="flex size-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-indigo-50 text-center dark:bg-indigo-950/50">
-            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-300">{formatRating(post.rating)}</span>
-            <span className="text-[0.65rem] font-bold text-slate-500 dark:text-slate-400">/10</span>
+            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-300">
+              {formatRating(post.rating)}
+            </span>
+            <span className="text-[0.65rem] font-bold text-slate-500 dark:text-slate-400">
+              /10
+            </span>
           </div>
         </div>
 
         <div className="pointer-events-auto relative z-30 flex items-center gap-2 border-t border-slate-100 pt-2 dark:border-slate-800">
-          <LikeButton action={likeAction} isLikedByCurrentUser={post.isLikedByCurrentUser} likesCount={post.likesCount} />
+          <LikeButton
+            action={likeAction}
+            isLikedByCurrentUser={post.isLikedByCurrentUser}
+            likesCount={post.likesCount}
+          />
           <Link
             aria-label={`${post.commentsCount} comentarios`}
             className="inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-black text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
             href={`/posts/${post.id}#comments`}
           >
-            <MessageCircle className="size-6" /> <span>{post.commentsCount}</span>
+            <MessageCircle className="size-6" />{" "}
+            <span>{post.commentsCount}</span>
           </Link>
         </div>
       </div>
@@ -134,7 +161,9 @@ export function LockedPostCard({ post }: LockedPostCardProps) {
           </div>
 
           <div className="absolute inset-0 flex items-center justify-center bg-white/65 p-5 text-center backdrop-blur-[2px] dark:bg-slate-950/65">
-            <p className="max-w-xs text-sm font-bold text-slate-700 dark:text-slate-200">Publica tu daily de hoy para desbloquear el feed.</p>
+            <p className="max-w-xs text-sm font-bold text-slate-700 dark:text-slate-200">
+              Publica tu daily de hoy para desbloquear el feed.
+            </p>
           </div>
         </div>
       </div>

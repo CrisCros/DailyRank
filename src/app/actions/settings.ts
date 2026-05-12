@@ -7,6 +7,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { authOptions } from "@/auth";
+import {
+  uploadAvatarToCloudinary,
+  validateImageUploadFile,
+} from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { accountSettingsSchema } from "@/validations/settings";
 
@@ -36,7 +40,8 @@ export async function updateAccountSettingsAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message ?? "Revisa los datos del formulario.";
+    const message =
+      parsed.error.issues[0]?.message ?? "Revisa los datos del formulario.";
     settingsRedirect("error", message);
   }
 
@@ -70,7 +75,10 @@ export async function updateAccountSettingsAction(formData: FormData) {
   let passwordHash: string | undefined;
 
   if (data.newPassword) {
-    const isCurrentPasswordValid = await compare(data.currentPassword ?? "", user.passwordHash);
+    const isCurrentPasswordValid = await compare(
+      data.currentPassword ?? "",
+      user.passwordHash,
+    );
 
     if (!isCurrentPasswordValid) {
       settingsRedirect("error", "La contraseña actual no es correcta.");
@@ -97,7 +105,10 @@ export async function updateAccountSettingsAction(formData: FormData) {
       },
     });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
       settingsRedirect("error", "Ese email o username ya está en uso.");
     }
 
@@ -109,4 +120,65 @@ export async function updateAccountSettingsAction(formData: FormData) {
   revalidatePath("/dashboard");
 
   settingsRedirect("success", "Configuración actualizada correctamente.");
+}
+
+export async function updateAvatarAction(formData: FormData) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
+  const avatar = formData.get("avatar");
+
+  if (!(avatar instanceof File) || avatar.size === 0) {
+    settingsRedirect("error", "Selecciona una imagen para tu avatar.");
+  }
+
+  try {
+    validateImageUploadFile(avatar, "El avatar");
+    const upload = await uploadAvatarToCloudinary(avatar);
+
+    if (!upload) {
+      settingsRedirect("error", "Selecciona una imagen para tu avatar.");
+    }
+
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { image: upload.secureUrl },
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      settingsRedirect("error", error.message);
+    }
+
+    throw error;
+  }
+
+  revalidatePath("/profile");
+  revalidatePath("/settings");
+  revalidatePath("/feed");
+  revalidatePath("/notifications");
+
+  settingsRedirect("success", "Avatar actualizado correctamente.");
+}
+
+export async function removeAvatarAction() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { image: null },
+  });
+
+  revalidatePath("/profile");
+  revalidatePath("/settings");
+  revalidatePath("/feed");
+  revalidatePath("/notifications");
+
+  settingsRedirect("success", "Avatar eliminado correctamente.");
 }

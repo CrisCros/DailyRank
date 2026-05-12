@@ -6,7 +6,10 @@ export function friendshipPairKey(userId: string, otherUserId: string) {
   return [userId, otherUserId].sort().join(":");
 }
 
-export function acceptedFriendshipWhere(userId: string, otherUserId: string): Prisma.FriendshipWhereInput {
+export function acceptedFriendshipWhere(
+  userId: string,
+  otherUserId: string,
+): Prisma.FriendshipWhereInput {
   return {
     status: "ACCEPTED",
     OR: [
@@ -16,21 +19,39 @@ export function acceptedFriendshipWhere(userId: string, otherUserId: string): Pr
   };
 }
 
-export function friendsOnlyAuthorWhere(viewerId: string): Prisma.UserWhereInput {
+export function friendsOnlyAuthorWhere(
+  viewerId: string,
+): Prisma.UserWhereInput {
   return {
     OR: [
-      { sentFriendships: { some: { receiverId: viewerId, status: "ACCEPTED" } } },
-      { receivedFriendships: { some: { requesterId: viewerId, status: "ACCEPTED" } } },
+      {
+        sentFriendships: { some: { receiverId: viewerId, status: "ACCEPTED" } },
+      },
+      {
+        receivedFriendships: {
+          some: { requesterId: viewerId, status: "ACCEPTED" },
+        },
+      },
     ],
   };
 }
 
 export function visiblePostWhere(viewerId: string): Prisma.PostWhereInput {
   return {
-    OR: [
-      { userId: viewerId },
-      { visibility: "PUBLIC" },
-      { visibility: "FRIENDS", user: friendsOnlyAuthorWhere(viewerId) },
+    AND: [
+      {
+        user: {
+          blocksCreated: { none: { blockedId: viewerId } },
+          blocksReceived: { none: { blockerId: viewerId } },
+        },
+      },
+      {
+        OR: [
+          { userId: viewerId },
+          { visibility: "PUBLIC" },
+          { visibility: "FRIENDS", user: friendsOnlyAuthorWhere(viewerId) },
+        ],
+      },
     ],
   };
 }
@@ -48,7 +69,10 @@ export async function areAcceptedFriends(userId: string, otherUserId: string) {
   return friendship !== null;
 }
 
-export async function canViewPost(userId: string, post: { userId: string; visibility: "PRIVATE" | "FRIENDS" | "PUBLIC" }) {
+export async function canViewPost(
+  userId: string,
+  post: { userId: string; visibility: "PRIVATE" | "FRIENDS" | "PUBLIC" },
+) {
   if (post.userId === userId || post.visibility === "PUBLIC") {
     return true;
   }
