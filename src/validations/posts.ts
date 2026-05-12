@@ -42,13 +42,6 @@ const optionalDescriptionSchema = z
   .optional()
   .transform((value) => (value ? value : null));
 
-const optionalPhotoUrlSchema = z
-  .string()
-  .trim()
-  .max(2048, "La URL de la foto no puede superar 2048 caracteres.")
-  .optional()
-  .transform((value) => (value ? value : null));
-
 const ratingSchema = z
   .string({ message: "La nota del día es obligatoria." })
   .trim()
@@ -68,7 +61,6 @@ export const postSchema = z.object({
   description: optionalDescriptionSchema,
   mood: optionalMoodSchema,
   visibility: z.enum(postVisibilities, { message: "Selecciona una visibilidad válida." }),
-  photoUrl: optionalPhotoUrlSchema,
 });
 
 export type PostInput = z.infer<typeof postSchema>;

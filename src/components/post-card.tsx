@@ -4,6 +4,7 @@ import type { PostMood, PostVisibility } from "@prisma/client";
 
 import { toggleLikeAction } from "@/app/actions/posts";
 import { LikeButton } from "@/components/like-button";
+import { PostPhoto } from "@/components/post-photo";
 import { formatLongDate } from "@/lib/dates";
 import { formatRating } from "@/lib/ratings";
 import { moodLabels, visibilityLabels } from "@/validations/posts";
@@ -25,6 +26,7 @@ export type PostCardPost = {
   description: string | null;
   mood: PostMood | null;
   visibility: PostVisibility;
+  photoUrl: string | null;
   user: PostAuthor;
   likesCount: number;
   commentsCount: number;
@@ -100,6 +102,8 @@ export function PostCard({ post }: PostCardProps) {
             </div>
           </div>
         </div>
+
+        <PostPhoto className="min-h-60" photoUrl={post.photoUrl} title={post.title} />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <LikeButton action={likeAction} isLikedByCurrentUser={post.isLikedByCurrentUser} likesCount={post.likesCount} />
