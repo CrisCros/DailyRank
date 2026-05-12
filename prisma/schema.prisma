@@ -8,26 +8,28 @@ datasource db {
 }
 
 model User {
-  id                  String        @id @default(cuid())
-  name                String
-  username            String        @unique
-  email               String        @unique
-  emailVerified       DateTime?
-  image               String?
-  bio                 String?       @db.VarChar(280)
-  passwordHash        String
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  accounts            Account[]
-  sessions            Session[]
-  settings            UserSettings?
-  posts               Post[]
-  likes               Like[]
-  comments            Comment[]
-  sentFriendships     Friendship[]  @relation("FriendshipRequester")
-  receivedFriendships Friendship[]  @relation("FriendshipReceiver")
+  id                    String         @id @default(cuid())
+  name                  String
+  username              String         @unique
+  email                 String         @unique
+  emailVerified         DateTime?
+  image                 String?
+  bio                   String?        @db.VarChar(280)
+  passwordHash          String
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  accounts              Account[]
+  sessions              Session[]
+  settings              UserSettings?
+  posts                 Post[]
+  likes                 Like[]
+  comments              Comment[]
+  sentFriendships       Friendship[]   @relation("FriendshipRequester")
+  receivedFriendships   Friendship[]   @relation("FriendshipReceiver")
   notificationsReceived Notification[] @relation("NotificationRecipient")
   notificationsActed    Notification[] @relation("NotificationActor")
+  blocksCreated         UserBlock[]    @relation("UserBlocker")
+  blocksReceived        UserBlock[]    @relation("UserBlocked")
 
   @@index([name])
   @@index([username])
@@ -85,15 +87,15 @@ model Comment {
 }
 
 model Friendship {
-  id          String           @id @default(cuid())
-  requesterId String
-  receiverId  String
-  pairKey     String           @unique
-  status      FriendshipStatus @default(PENDING)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  receiver    User             @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  id            String           @id @default(cuid())
+  requesterId   String
+  receiverId    String
+  pairKey       String           @unique
+  status        FriendshipStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  requester     User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver      User             @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
   notifications Notification[]
 
   @@unique([requesterId, receiverId])
@@ -117,6 +119,18 @@ model Notification {
   @@index([recipientId, readAt, createdAt])
   @@index([actorId])
   @@index([friendshipId])
+}
+
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("UserBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
 }
 
 model UserSettings {
@@ -190,7 +204,6 @@ enum FriendshipStatus {
   ACCEPTED
   REJECTED
 }
-
 
 enum NotificationType {
   FRIEND_REQUEST_RECEIVED

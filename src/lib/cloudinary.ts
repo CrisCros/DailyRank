@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 
-import { MAX_POST_PHOTO_SIZE_BYTES, MAX_POST_PHOTO_SIZE_MB, isImageMimeType } from "@/lib/post-photos";
+import {
+  MAX_POST_PHOTO_SIZE_BYTES,
+  MAX_POST_PHOTO_SIZE_MB,
+  isImageMimeType,
+} from "@/lib/post-photos";
 
 export type PhotoUploadResult = {
   secureUrl: string;
@@ -16,11 +20,12 @@ export function isImageFile(file: File) {
   return isImageMimeType(file.type);
 }
 
-function getCloudinaryConfig() {
+function getCloudinaryConfig(folderOverride?: string) {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "dayrank/posts";
+  const folder =
+    folderOverride ?? process.env.CLOUDINARY_UPLOAD_FOLDER ?? "dayrank/posts";
 
   if (!cloudName || !apiKey || !apiSecret) {
     throw new Error("Cloudinary no está configurado.");
@@ -29,7 +34,10 @@ function getCloudinaryConfig() {
   return { apiKey, apiSecret, cloudName, folder };
 }
 
-function signCloudinaryParams(params: Record<string, string | number>, apiSecret: string) {
+function signCloudinaryParams(
+  params: Record<string, string | number>,
+  apiSecret: string,
+) {
   const payload = Object.entries(params)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, value]) => `${key}=${value}`)
@@ -42,36 +50,47 @@ async function readCloudinaryError(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
 
   if (contentType.includes("application/json")) {
-    const payload = (await response.json().catch(() => null)) as CloudinaryErrorPayload | null;
+    const payload = (await response
+      .json()
+      .catch(() => null)) as CloudinaryErrorPayload | null;
     const message = payload?.error?.message;
-    return typeof message === "string" && message.length > 0 ? message : JSON.stringify(payload);
+    return typeof message === "string" && message.length > 0
+      ? message
+      : JSON.stringify(payload);
   }
 
-  return response.text().catch(() => "No se pudo leer la respuesta de error de Cloudinary.");
+  return response
+    .text()
+    .catch(() => "No se pudo leer la respuesta de error de Cloudinary.");
 }
 
-export function validatePostPhotoFile(file: File) {
+export function validateImageUploadFile(file: File, label = "La foto") {
   if (file.size === 0) {
     return;
   }
 
   if (!isImageFile(file)) {
-    throw new Error("La foto debe ser un archivo de imagen.");
+    throw new Error(`${label} debe ser un archivo de imagen.`);
   }
 
   if (file.size > MAX_POST_PHOTO_SIZE_BYTES) {
-    throw new Error(`La foto no puede superar ${MAX_POST_PHOTO_SIZE_MB} MB.`);
+    throw new Error(`${label} no puede superar ${MAX_POST_PHOTO_SIZE_MB} MB.`);
   }
 }
 
-export async function uploadPostPhotoToCloudinary(file: File): Promise<PhotoUploadResult | null> {
+async function uploadImageToCloudinary(
+  file: File,
+  folderOverride?: string,
+  label = "La foto",
+): Promise<PhotoUploadResult | null> {
   if (file.size === 0) {
     return null;
   }
 
-  validatePostPhotoFile(file);
+  validateImageUploadFile(file, label);
 
-  const { apiKey, apiSecret, cloudName, folder } = getCloudinaryConfig();
+  const { apiKey, apiSecret, cloudName, folder } =
+    getCloudinaryConfig(folderOverride);
   const timestamp = Math.round(Date.now() / 1000);
   const signedParams = { folder, timestamp };
   const signature = signCloudinaryParams(signedParams, apiSecret);
@@ -83,10 +102,13 @@ export async function uploadPostPhotoToCloudinary(file: File): Promise<PhotoUplo
   formData.set("folder", folder);
   formData.set("signature", signature);
 
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-    method: "POST",
-    body: formData,
-  });
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
 
   if (!response.ok) {
     const cloudinaryMessage = await readCloudinaryError(response);
@@ -97,18 +119,46 @@ export async function uploadPostPhotoToCloudinary(file: File): Promise<PhotoUplo
       statusText: response.statusText,
     });
 
-    throw new Error("No se pudo subir la foto a Cloudinary. Inténtalo de nuevo.");
+    throw new Error(
+      "No se pudo subir la foto a Cloudinary. Inténtalo de nuevo.",
+    );
   }
 
   const payload = (await response.json()) as { secure_url?: unknown };
 
-  if (typeof payload.secure_url !== "string" || payload.secure_url.length === 0) {
+  if (
+    typeof payload.secure_url !== "string" ||
+    payload.secure_url.length === 0
+  ) {
     console.error("Cloudinary upload response did not include secure_url", {
       hasSecureUrl: typeof payload.secure_url === "string",
     });
 
-    throw new Error("No se pudo subir la foto a Cloudinary. Inténtalo de nuevo.");
+    throw new Error(
+      "No se pudo subir la foto a Cloudinary. Inténtalo de nuevo.",
+    );
   }
 
   return { secureUrl: payload.secure_url };
+}
+
+export function validatePostPhotoFile(file: File) {
+  validateImageUploadFile(file, "La foto");
+}
+
+export async function uploadPostPhotoToCloudinary(
+  file: File,
+): Promise<PhotoUploadResult | null> {
+  return uploadImageToCloudinary(file);
+}
+
+export async function uploadAvatarToCloudinary(
+  file: File,
+): Promise<PhotoUploadResult | null> {
+  validateImageUploadFile(file, "El avatar");
+  return uploadImageToCloudinary(
+    file,
+    process.env.CLOUDINARY_AVATAR_FOLDER ?? "dayrank/avatars",
+    "El avatar",
+  );
 }
