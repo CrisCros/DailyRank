@@ -3,8 +3,10 @@ import { CalendarPlus, Eye, Pencil } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
+import { toggleLikeAction } from "@/app/actions/posts";
 import { authOptions } from "@/auth";
 import { AppShell } from "@/components/app-shell";
+import { LikeButton } from "@/components/like-button";
 import { Notice } from "@/components/notice";
 import { formatLongDate, startOfTodayUtc } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
@@ -28,7 +30,19 @@ export default async function DayPage({ searchParams }: DayPageProps) {
   const today = startOfTodayUtc();
   const post = await prisma.post.findUnique({
     where: { userId_date: { userId: session.user.id, date: today } },
+    include: {
+      _count: {
+        select: { likes: true },
+      },
+      likes: {
+        where: { userId: session.user.id },
+        select: { id: true },
+        take: 1,
+      },
+    },
   });
+
+  const likeAction = post ? toggleLikeAction.bind(null, post.id) : null;
 
   return (
     <AppShell>
@@ -64,6 +78,7 @@ export default async function DayPage({ searchParams }: DayPageProps) {
             {post.description ? <p className="leading-7 text-slate-600 dark:text-slate-300">{post.description}</p> : null}
 
             <div className="flex flex-col gap-3 sm:flex-row">
+              {likeAction ? <LikeButton action={likeAction} isLikedByCurrentUser={post.likes.length > 0} likesCount={post._count.likes} /> : null}
               <Link className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500" href={`/posts/${post.id}`}>
                 <Eye className="size-4" /> Ver detalle
               </Link>
