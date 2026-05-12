@@ -44,6 +44,7 @@ model Post {
   @@unique([userId, date])
   @@index([date])
   @@index([visibility])
+  @@index([visibility, date, createdAt])
 }
 
 model UserSettings {
