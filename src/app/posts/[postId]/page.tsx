@@ -10,6 +10,7 @@ import { LikeButton } from "@/components/like-button";
 import { Notice } from "@/components/notice";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDateTime, formatLongDate } from "@/lib/dates";
+import { visiblePostWhere } from "@/lib/friendships";
 import { prisma } from "@/lib/prisma";
 import { formatRating } from "@/lib/ratings";
 import { moodLabels, visibilityLabels } from "@/validations/posts";
@@ -32,7 +33,7 @@ export default async function PostDetailPage({ params, searchParams }: PostDetai
   const post = await prisma.post.findFirst({
     where: {
       id: routeParams.postId,
-      OR: [{ userId: session.user.id }, { visibility: "PUBLIC" }],
+      ...visiblePostWhere(session.user.id),
     },
     include: {
       _count: {

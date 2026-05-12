@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/auth";
 import { startOfTodayUtc } from "@/lib/dates";
+import { canViewPost } from "@/lib/friendships";
 import { prisma } from "@/lib/prisma";
 import { commentContentSchema, commentIdSchema } from "@/validations/comments";
 import { postIdSchema } from "@/validations/likes";
@@ -31,10 +32,6 @@ function getPostInput(formData: FormData) {
   });
 }
 
-
-function canViewPost(userId: string, post: { userId: string; visibility: "PRIVATE" | "FRIENDS" | "PUBLIC" }) {
-  return post.userId === userId || post.visibility === "PUBLIC";
-}
 
 function revalidatePostViews(postId: string) {
   revalidatePath("/feed");
@@ -164,7 +161,7 @@ export async function toggleLikeAction(postId: string) {
     },
   });
 
-  if (!post || !canViewPost(userId, post)) {
+  if (!post || !(await canViewPost(userId, post))) {
     throw new Error("No puedes dar like a una publicación que no puedes ver.");
   }
 
@@ -219,7 +216,7 @@ export async function createCommentAction(postId: string, formData: FormData) {
     },
   });
 
-  if (!post || !canViewPost(userId, post)) {
+  if (!post || !(await canViewPost(userId, post))) {
     throw new Error("No puedes comentar en una publicación que no puedes ver.");
   }
 
