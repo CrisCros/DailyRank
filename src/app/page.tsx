@@ -19,7 +19,7 @@ export default async function HomePage() {
       <header className="flex items-center justify-between gap-4">
         <Brand />
         <Link
-          className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-white dark:text-slate-950"
+          className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold !text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-white dark:!text-slate-950 dark:hover:bg-slate-200"
           href={session ? "/dashboard" : "/login"}
         >
           {session ? "Entrar" : "Login"}

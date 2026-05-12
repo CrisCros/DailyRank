@@ -15,7 +15,7 @@ function encodeMessage(message: string) {
 }
 
 function settingsRedirect(type: "error" | "success", message: string): never {
-  return redirect(`/settings?${type}=${encodeMessage(message)}`);
+  redirect(`/settings?${type}=${encodeMessage(message)}`);
 }
 
 export async function updateAccountSettingsAction(formData: FormData) {
@@ -40,6 +40,8 @@ export async function updateAccountSettingsAction(formData: FormData) {
     settingsRedirect("error", message);
   }
 
+  const data = parsed.data;
+
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { id: true, passwordHash: true },
@@ -52,44 +54,44 @@ export async function updateAccountSettingsAction(formData: FormData) {
   const existingUser = await prisma.user.findFirst({
     where: {
       id: { not: user.id },
-      OR: [{ email: parsed.data.email }, { username: parsed.data.username }],
+      OR: [{ email: data.email }, { username: data.username }],
     },
     select: { email: true, username: true },
   });
 
-  if (existingUser?.email === parsed.data.email) {
+  if (existingUser?.email === data.email) {
     settingsRedirect("error", "Ya existe una cuenta con ese email.");
   }
 
-  if (existingUser?.username === parsed.data.username) {
+  if (existingUser?.username === data.username) {
     settingsRedirect("error", "Ese username ya está en uso.");
   }
 
   let passwordHash: string | undefined;
 
-  if (parsed.data.newPassword) {
-    const isCurrentPasswordValid = await compare(parsed.data.currentPassword ?? "", user.passwordHash);
+  if (data.newPassword) {
+    const isCurrentPasswordValid = await compare(data.currentPassword ?? "", user.passwordHash);
 
     if (!isCurrentPasswordValid) {
       settingsRedirect("error", "La contraseña actual no es correcta.");
     }
 
-    passwordHash = await hash(parsed.data.newPassword, 12);
+    passwordHash = await hash(data.newPassword, 12);
   }
 
   try {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        name: parsed.data.name,
-        username: parsed.data.username,
-        email: parsed.data.email,
-        bio: parsed.data.bio,
+        name: data.name,
+        username: data.username,
+        email: data.email,
+        bio: data.bio,
         ...(passwordHash ? { passwordHash } : {}),
         settings: {
           upsert: {
-            create: { theme: parsed.data.theme },
-            update: { theme: parsed.data.theme },
+            create: { theme: data.theme },
+            update: { theme: data.theme },
           },
         },
       },
