@@ -56,6 +56,7 @@ export default async function FeedPage() {
           description: true,
           mood: true,
           visibility: true,
+          photoUrl: true,
           _count: {
             select: { likes: true, comments: true },
           },
@@ -82,6 +83,7 @@ export default async function FeedPage() {
     description: post.description,
     mood: post.mood,
     visibility: post.visibility,
+    photoUrl: post.photoUrl,
     user: post.user,
     likesCount: post._count.likes,
     commentsCount: post._count.comments,

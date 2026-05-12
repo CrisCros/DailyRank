@@ -25,6 +25,16 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
 
   const post = await prisma.post.findFirst({
     where: { id: routeParams.postId, userId: session.user.id },
+    select: {
+      id: true,
+      date: true,
+      rating: true,
+      title: true,
+      description: true,
+      mood: true,
+      visibility: true,
+      photoUrl: true,
+    },
   });
 
   if (!post) {
@@ -47,7 +57,7 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
         </div>
 
         <Notice error={query.error} />
-        <PostForm action={updatePostAction} cancelHref={`/posts/${post.id}`} mode="edit" post={post} />
+        <PostForm action={updatePostAction} cancelHref={`/posts/${post.id}`} mode="edit" post={{ ...post, rating: post.rating.toString() }} />
       </section>
     </AppShell>
   );

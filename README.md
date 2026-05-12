@@ -52,9 +52,10 @@ Variables necesarias:
 | `AUTH_SECRET` | Secreto largo usado por Auth.js para firmar sesiones. |
 | `AUTH_URL` | URL pública/local de la app. En local: `http://localhost:3000`. |
 | `NEXTAUTH_URL` | Compatibilidad con NextAuth. En local: `http://localhost:3000`. |
-| `CLOUDINARY_CLOUD_NAME` | Reservada para subida de imágenes en una fase posterior. |
-| `CLOUDINARY_API_KEY` | Reservada para subida de imágenes en una fase posterior. |
-| `CLOUDINARY_API_SECRET` | Reservada para subida de imágenes en una fase posterior. |
+| `CLOUDINARY_CLOUD_NAME` | Nombre de cloud de Cloudinary para subir fotos opcionales de publicaciones. |
+| `CLOUDINARY_API_KEY` | API key de Cloudinary usada para firmar subidas desde el servidor. |
+| `CLOUDINARY_API_SECRET` | API secret de Cloudinary usada solo en servidor para firmar subidas. |
+| `CLOUDINARY_UPLOAD_FOLDER` | Opcional. Carpeta destino de Cloudinary para fotos de posts. Por defecto: `dayrank/posts`. |
 
 Puedes generar un secreto con:
 

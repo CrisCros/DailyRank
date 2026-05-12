@@ -8,6 +8,7 @@ import { authOptions } from "@/auth";
 import { AppShell } from "@/components/app-shell";
 import { LikeButton } from "@/components/like-button";
 import { Notice } from "@/components/notice";
+import { PostPhoto } from "@/components/post-photo";
 import { formatLongDate, startOfTodayUtc } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { formatRating } from "@/lib/ratings";
@@ -76,6 +77,8 @@ export default async function DayPage({ searchParams }: DayPageProps) {
             </div>
 
             {post.description ? <p className="leading-7 text-slate-600 dark:text-slate-300">{post.description}</p> : null}
+
+            <PostPhoto photoUrl={post.photoUrl} title={post.title} />
 
             <div className="flex flex-col gap-3 sm:flex-row">
               {likeAction ? <LikeButton action={likeAction} isLikedByCurrentUser={post.likes.length > 0} likesCount={post._count.likes} /> : null}
