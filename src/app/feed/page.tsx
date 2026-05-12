@@ -7,6 +7,7 @@ import { authOptions } from "@/auth";
 import { AppShell } from "@/components/app-shell";
 import { LockedPostCard, PostCard, type LockedPostCardPost, type PostCardPost } from "@/components/post-card";
 import { startOfTodayUtc, startOfTomorrowUtc } from "@/lib/dates";
+import { friendsOnlyAuthorWhere } from "@/lib/friendships";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,11 @@ export default async function FeedPage() {
     ? await prisma.post.findMany({
         where: {
           date: todayFilter,
-          OR: [{ userId: session.user.id }, { visibility: "PUBLIC" }],
+          OR: [
+            { userId: session.user.id },
+            { visibility: "PUBLIC" },
+            { visibility: "FRIENDS", user: friendsOnlyAuthorWhere(session.user.id) },
+          ],
         },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         select: {
@@ -88,14 +93,16 @@ export default async function FeedPage() {
     : await prisma.post.findMany({
         where: {
           date: todayFilter,
-          visibility: "PUBLIC",
+          OR: [
+            { visibility: "PUBLIC" },
+            { visibility: "FRIENDS", user: friendsOnlyAuthorWhere(session.user.id) },
+          ],
           NOT: { userId: session.user.id },
         },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         select: {
           id: true,
           date: true,
-          createdAt: true,
           user: {
             select: {
               name: true,

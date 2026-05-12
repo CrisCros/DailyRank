@@ -8,22 +8,24 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  name          String
-  username      String        @unique
-  email         String        @unique
-  emailVerified DateTime?
-  image         String?
-  bio           String?       @db.VarChar(280)
-  passwordHash  String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  settings      UserSettings?
-  posts         Post[]
-  likes         Like[]
-  comments      Comment[]
+  id                  String        @id @default(cuid())
+  name                String
+  username            String        @unique
+  email               String        @unique
+  emailVerified       DateTime?
+  image               String?
+  bio                 String?       @db.VarChar(280)
+  passwordHash        String
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  accounts            Account[]
+  sessions            Session[]
+  settings            UserSettings?
+  posts               Post[]
+  likes               Like[]
+  comments            Comment[]
+  sentFriendships     Friendship[]  @relation("FriendshipRequester")
+  receivedFriendships Friendship[]  @relation("FriendshipReceiver")
 
   @@index([name])
   @@index([username])
@@ -78,6 +80,23 @@ model Comment {
   @@index([postId])
   @@index([userId])
   @@index([createdAt])
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  receiverId  String
+  pairKey     String           @unique
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver    User             @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@index([requesterId, status])
+  @@index([receiverId, status])
+  @@index([status])
 }
 
 model UserSettings {
@@ -144,4 +163,10 @@ enum PostVisibility {
   PRIVATE
   FRIENDS
   PUBLIC
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
