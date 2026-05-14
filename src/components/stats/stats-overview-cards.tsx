@@ -1,7 +1,8 @@
 import { CalendarDays, Flame, Medal, TrendingDown, TrendingUp } from "lucide-react";
 
-import type { StatsPost } from "@/lib/stats";
+import { StreakBadge } from "@/components/streak-badge";
 import { formatRating } from "@/lib/ratings";
+import type { StatsPost } from "@/lib/stats";
 
 export type StatsOverviewCardsProps = {
   totalAverage: number | null;
@@ -29,7 +30,7 @@ export function StatsOverviewCards({
     { title: "Este mes", value: formatNullableRating(currentMonthAverage), detail: `${currentMonthDailies} dailies este mes`, icon: CalendarDays },
     { title: "Mejor día", value: bestDaily ? `${formatRating(bestDaily.rating)}/10` : "—", detail: bestDaily?.title ?? "Publica más dailies para verlo", icon: Medal },
     { title: "Peor día", value: worstDaily ? `${formatRating(worstDaily.rating)}/10` : "—", detail: worstDaily?.title ?? "Aún no hay suficiente historial", icon: TrendingDown },
-    { title: "Racha actual", value: `${currentStreak} días`, detail: "Consecutivos publicando", icon: Flame },
+    { title: "Racha actual", value: currentStreak > 0 ? `${currentStreak} días` : "Sin racha", detail: "Hoy o pausada desde ayer", icon: Flame, streak: currentStreak },
     { title: "Mejor racha", value: `${bestStreak} días`, detail: "Tu máxima secuencia histórica", icon: Flame },
   ];
 
@@ -49,7 +50,10 @@ export function StatsOverviewCards({
                 <Icon className="size-5" />
               </div>
             </div>
-            <p className="mt-3 line-clamp-2 text-sm font-semibold text-slate-500 dark:text-slate-400">{card.detail}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <p className="line-clamp-2 text-sm font-semibold text-slate-500 dark:text-slate-400">{card.detail}</p>
+              {card.title === "Racha actual" ? <StreakBadge compact streak={currentStreak} /> : null}
+            </div>
           </article>
         );
       })}

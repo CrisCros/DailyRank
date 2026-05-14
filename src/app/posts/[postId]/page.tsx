@@ -14,12 +14,14 @@ import { AppShell } from "@/components/app-shell";
 import { LikeButton } from "@/components/like-button";
 import { Notice } from "@/components/notice";
 import { PostPhoto } from "@/components/post-photo";
+import { CompactStreak, StreakBadge } from "@/components/streak-badge";
 import { SubmitButton } from "@/components/submit-button";
 import { UserAvatar } from "@/components/user-avatar";
 import { formatDateTime, formatLongDate } from "@/lib/dates";
 import { visiblePostWhere } from "@/lib/friendships";
 import { prisma } from "@/lib/prisma";
 import { formatRating } from "@/lib/ratings";
+import { getUserCurrentStreak } from "@/lib/stats";
 import { moodLabels, visibilityLabels } from "@/validations/posts";
 
 type PostDetailPageProps = {
@@ -56,10 +58,10 @@ export default async function PostDetailPage({
             content: true,
             createdAt: true,
             userId: true,
-            user: { select: { name: true, username: true, image: true } },
+            user: { select: { id: true, name: true, username: true, image: true } },
           },
         },
-        user: { select: { name: true, username: true, image: true } },
+        user: { select: { id: true, name: true, username: true, image: true } },
       },
     }),
     prisma.notification.count({ where: { recipientId: session.user.id } }),
@@ -67,6 +69,7 @@ export default async function PostDetailPage({
 
   if (!post) notFound();
 
+  const authorStreak = await getUserCurrentStreak(post.user.id);
   const isOwner = post.userId === session.user.id;
   const likeAction = toggleLikeAction.bind(null, post.id);
   const commentAction = createCommentAction.bind(null, post.id);
@@ -88,8 +91,16 @@ export default async function PostDetailPage({
                   >
                     {post.user.name}
                   </Link>
-                  <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-                    @{post.user.username} · {formatDateTime(post.createdAt)}
+                  <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+                    <span className="truncate">@{post.user.username}</span>
+                    {authorStreak > 0 ? (
+                      <>
+                        <span aria-hidden>·</span>
+                        <CompactStreak streak={authorStreak} />
+                        <StreakBadge compact streak={authorStreak} />
+                      </>
+                    ) : null}
+                    <span className="basis-full truncate sm:basis-auto">{formatDateTime(post.createdAt)}</span>
                   </p>
                 </div>
               </div>

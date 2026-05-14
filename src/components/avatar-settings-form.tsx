@@ -7,8 +7,8 @@ import { Camera, Trash2 } from "lucide-react";
 import { removeAvatarAction, updateAvatarAction } from "@/app/actions/settings";
 import { SubmitButton } from "@/components/submit-button";
 import { UserAvatar } from "@/components/user-avatar";
+import { MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB, isImageMimeType } from "@/lib/post-photos";
 
-const maxAvatarBytes = 5 * 1024 * 1024;
 
 type AvatarSettingsFormProps = {
   user: {
@@ -31,7 +31,7 @@ export function AvatarSettingsForm({ user }: AvatarSettingsFormProps) {
           Foto de perfil
         </h2>
         <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-          Sube una imagen de hasta 5 MB. En móvil puedes usar cámara o galería.
+          Sube una imagen de hasta {MAX_IMAGE_SIZE_MB} MB. En móvil puedes usar cámara o galería.
         </p>
       </div>
 
@@ -74,14 +74,14 @@ export function AvatarSettingsForm({ user }: AvatarSettingsFormProps) {
                   return;
                 }
 
-                if (!file.type.startsWith("image/")) {
+                if (!isImageMimeType(file.type)) {
                   setError("El avatar debe ser una imagen.");
                   event.target.value = "";
                   return;
                 }
 
-                if (file.size > maxAvatarBytes) {
-                  setError("El avatar no puede superar 5 MB.");
+                if (file.size > MAX_IMAGE_SIZE_BYTES) {
+                  setError(`La imagen no puede superar ${MAX_IMAGE_SIZE_MB} MB.`);
                   event.target.value = "";
                   return;
                 }

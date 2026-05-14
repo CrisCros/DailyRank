@@ -5,6 +5,7 @@ import type { PostMood, PostVisibility } from "@prisma/client";
 import { toggleLikeAction } from "@/app/actions/posts";
 import { LikeButton } from "@/components/like-button";
 import { PostPhoto } from "@/components/post-photo";
+import { StreakBadge, CompactStreak } from "@/components/streak-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { formatLongDate } from "@/lib/dates";
 import { formatRating } from "@/lib/ratings";
@@ -15,6 +16,7 @@ type FormattableRating = {
 };
 
 type PostAuthor = {
+  id?: string;
   name: string;
   username: string;
   image: string | null;
@@ -33,12 +35,14 @@ export type PostCardPost = {
   likesCount: number;
   commentsCount: number;
   isLikedByCurrentUser: boolean;
+  authorStreak?: number;
 };
 
 export type LockedPostCardPost = {
   id: string;
   date: Date;
   user: PostAuthor;
+  authorStreak?: number;
 };
 
 type PostCardProps = {
@@ -49,7 +53,7 @@ type LockedPostCardProps = {
   post: LockedPostCardPost;
 };
 
-function PostAuthorHeader({ date, user }: { date?: Date; user: PostAuthor }) {
+function PostAuthorHeader({ authorStreak = 0, date, user }: { authorStreak?: number; date?: Date; user: PostAuthor }) {
   return (
     <div className="flex items-center gap-3">
       <UserAvatar user={user} />
@@ -60,9 +64,16 @@ function PostAuthorHeader({ date, user }: { date?: Date; user: PostAuthor }) {
         >
           {user.name}
         </Link>
-        <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-          @{user.username}
-          {date ? ` · ${formatLongDate(date)}` : ""}
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+          <span className="truncate">@{user.username}</span>
+          {authorStreak > 0 ? (
+            <>
+              <span aria-hidden>·</span>
+              <CompactStreak streak={authorStreak} />
+              <StreakBadge compact streak={authorStreak} />
+            </>
+          ) : null}
+          {date ? <span className="basis-full truncate sm:basis-auto">{formatLongDate(date)}</span> : null}
         </p>
       </div>
     </div>
@@ -82,7 +93,7 @@ export function PostCard({ post }: PostCardProps) {
 
       <div className="pointer-events-none relative z-20 space-y-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
-          <PostAuthorHeader date={post.date} user={post.user} />
+          <PostAuthorHeader authorStreak={post.authorStreak} date={post.date} user={post.user} />
           <div className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
             <Eye className="size-3.5" /> {visibilityLabels[post.visibility]}
           </div>
@@ -143,7 +154,7 @@ export function LockedPostCard({ post }: LockedPostCardProps) {
     <article className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-950 dark:shadow-black/20">
       <div className="space-y-5 p-5">
         <div className="flex items-start justify-between gap-4">
-          <PostAuthorHeader date={post.date} user={post.user} />
+          <PostAuthorHeader authorStreak={post.authorStreak} date={post.date} user={post.user} />
           <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
             <LockKeyhole className="size-4" /> Bloqueado
           </div>

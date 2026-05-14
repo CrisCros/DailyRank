@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 
 import {
-  MAX_POST_PHOTO_SIZE_BYTES,
-  MAX_POST_PHOTO_SIZE_MB,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_IMAGE_SIZE_MB,
   isImageMimeType,
 } from "@/lib/post-photos";
 
@@ -73,8 +73,8 @@ export function validateImageUploadFile(file: File, label = "La foto") {
     throw new Error(`${label} debe ser un archivo de imagen.`);
   }
 
-  if (file.size > MAX_POST_PHOTO_SIZE_BYTES) {
-    throw new Error(`${label} no puede superar ${MAX_POST_PHOTO_SIZE_MB} MB.`);
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    throw new Error(`La imagen no puede superar ${MAX_IMAGE_SIZE_MB} MB.`);
   }
 }
 

@@ -21,6 +21,7 @@ import { visibleAuthorNotBlockedWhere } from "@/lib/blocks";
 import { friendsOnlyAuthorWhere } from "@/lib/friendships";
 import { prisma } from "@/lib/prisma";
 import { formatRating } from "@/lib/ratings";
+import { getUsersCurrentStreaks } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -86,10 +87,12 @@ export default async function FeedPage() {
             select: { id: true },
             take: 1,
           },
-          user: { select: { name: true, username: true, image: true } },
+          user: { select: { id: true, name: true, username: true, image: true } },
         },
       })
     : [];
+
+  const feedAuthorStreaks = await getUsersCurrentStreaks(feedPosts.map((post) => post.user.id));
 
   const posts: PostCardPost[] = feedPosts.map((post) => ({
     id: post.id,
@@ -104,9 +107,10 @@ export default async function FeedPage() {
     likesCount: post._count.likes,
     commentsCount: post._count.comments,
     isLikedByCurrentUser: post.likes.length > 0,
+    authorStreak: feedAuthorStreaks.get(post.user.id) ?? 0,
   }));
 
-  const lockedPosts: LockedPostCardPost[] = isFeedUnlocked
+  const lockedFeedPosts = isFeedUnlocked
     ? []
     : await prisma.post.findMany({
         where: {
@@ -129,9 +133,15 @@ export default async function FeedPage() {
         select: {
           id: true,
           date: true,
-          user: { select: { name: true, username: true, image: true } },
+          user: { select: { id: true, name: true, username: true, image: true } },
         },
       });
+
+  const lockedAuthorStreaks = await getUsersCurrentStreaks(lockedFeedPosts.map((post) => post.user.id));
+  const lockedPosts: LockedPostCardPost[] = lockedFeedPosts.map((post) => ({
+    ...post,
+    authorStreak: lockedAuthorStreaks.get(post.user.id) ?? 0,
+  }));
 
   return (
     <AppShell unreadNotificationsCount={unreadNotificationsCount}>

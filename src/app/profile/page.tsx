@@ -20,10 +20,12 @@ import {
 import { authOptions } from "@/auth";
 import { AppShell } from "@/components/app-shell";
 import { LogoutButton } from "@/components/logout-button";
+import { StreakSummary } from "@/components/streak-badge";
 import { SubmitButton } from "@/components/submit-button";
 import { UserAvatar } from "@/components/user-avatar";
 import { noBlockBetweenWhere } from "@/lib/blocks";
 import { prisma } from "@/lib/prisma";
+import { getUserCurrentStreak } from "@/lib/stats";
 
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
@@ -38,6 +40,7 @@ export default async function ProfilePage() {
     outgoingRequests,
     friendships,
     unreadNotificationsCount,
+    currentStreak,
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
@@ -99,6 +102,7 @@ export default async function ProfilePage() {
       take: 6,
     }),
     prisma.notification.count({ where: { recipientId: session.user.id } }),
+    getUserCurrentStreak(session.user.id),
   ]);
 
   if (!user) {
@@ -165,6 +169,8 @@ export default async function ProfilePage() {
             </p>
           </div>
         </div>
+
+        <StreakSummary streak={currentStreak} />
 
         <div className="grid gap-4 md:grid-cols-3">
           <ProfileInfo
