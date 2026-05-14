@@ -1,4 +1,5 @@
-import { Bell, UserPlus, Users } from "lucide-react";
+import Link from "next/link";
+import { Bell, Heart, MessageCircle, Reply, UserPlus, Users } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
@@ -27,6 +28,26 @@ const notificationCopy = {
     title: "Solicitud aceptada",
     text: "aceptó tu solicitud de amistad.",
   },
+  POST_LIKED: {
+    icon: Heart,
+    title: "Like nuevo",
+    text: "le dio like a tu daily.",
+  },
+  POST_COMMENTED: {
+    icon: MessageCircle,
+    title: "Comentario nuevo",
+    text: "comentó en tu daily.",
+  },
+  COMMENT_REPLIED: {
+    icon: Reply,
+    title: "Respuesta nueva",
+    text: "respondió a tu comentario.",
+  },
+  USER_MENTIONED: {
+    icon: MessageCircle,
+    title: "Mención nueva",
+    text: "te mencionó en un comentario.",
+  },
 };
 
 export default async function NotificationsPage() {
@@ -51,6 +72,8 @@ export default async function NotificationsPage() {
         id: true,
         type: true,
         createdAt: true,
+        postId: true,
+        friendshipId: true,
         actor: { select: { name: true, username: true, image: true } },
       },
     }),
@@ -86,7 +109,7 @@ export default async function NotificationsPage() {
                 Sin notificaciones todavía
               </h2>
               <p className="mt-2 text-slate-600 dark:text-slate-300">
-                Aquí aparecerán solicitudes de amistad y amistades aceptadas.
+Aquí aparecerán likes, comentarios, respuestas, menciones y amistades.
               </p>
             </div>
           ) : (
@@ -94,6 +117,7 @@ export default async function NotificationsPage() {
               {notifications.map((notification) => {
                 const copy = notificationCopy[notification.type];
                 const Icon = copy.icon;
+                const href = notification.postId ? `/posts/${notification.postId}` : "/friends";
                 return (
                   <article className="flex gap-4 p-5" key={notification.id}>
                     <div className="relative shrink-0">
@@ -115,6 +139,12 @@ export default async function NotificationsPage() {
                         <strong>{notification.actor.name}</strong> @
                         {notification.actor.username} {copy.text}
                       </p>
+                      <Link
+                        className="mt-2 inline-flex rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-700 transition hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-950"
+                        href={href}
+                      >
+                        Ver actividad
+                      </Link>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                         <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                           {formatDateTime(notification.createdAt)}

@@ -9,6 +9,8 @@ type CreateNotificationInput = {
   actorId: string;
   type: NotificationType;
   friendshipId?: string | null;
+  postId?: string | null;
+  commentId?: string | null;
 };
 
 export async function createNotificationAndTrim(input: CreateNotificationInput) {

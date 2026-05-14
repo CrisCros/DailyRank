@@ -8,7 +8,8 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/auth";
 import { uploadPostPhotoToCloudinary, validatePostPhotoFile } from "@/lib/cloudinary";
 import { startOfTodayUtc } from "@/lib/dates";
-import { canViewPost } from "@/lib/friendships";
+import { canViewPost, hasBlockBetween } from "@/lib/friendships";
+import { createNotificationAndTrim } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { commentContentSchema, commentIdSchema } from "@/validations/comments";
 import { postIdSchema } from "@/validations/likes";
@@ -70,6 +71,18 @@ async function getUploadedPhotoUrlOrRedirect(formData: FormData, redirectPath: s
   }
 }
 
+const mentionRegex = /(^|[^\w.])@([a-zA-Z0-9_]{3,30})\b/g;
+
+function extractMentionedUsernames(content: string) {
+  const usernames = new Set<string>();
+
+  for (const match of content.matchAll(mentionRegex)) {
+    usernames.add(match[2].toLowerCase());
+  }
+
+  return [...usernames];
+}
+
 function revalidatePostViews(postId: string) {
   revalidatePath("/feed");
   revalidatePath("/day");
@@ -85,6 +98,50 @@ async function getRequiredUserId() {
   }
 
   return session.user.id;
+}
+
+async function notifyCommentMentions(input: {
+  actorId: string;
+  content: string;
+  post: { id: string; userId: string; visibility: "PRIVATE" | "FRIENDS" | "PUBLIC" };
+  commentId: string;
+  skipRecipientIds?: Set<string>;
+}) {
+  const usernames = extractMentionedUsernames(input.content);
+
+  if (usernames.length === 0) {
+    return;
+  }
+
+  const mentionedUsers = await prisma.user.findMany({
+    where: { username: { in: usernames } },
+    select: { id: true },
+  });
+
+  await Promise.all(
+    mentionedUsers.map(async (mentionedUser) => {
+      if (mentionedUser.id === input.actorId || input.skipRecipientIds?.has(mentionedUser.id)) {
+        return;
+      }
+
+      const [mentionedCanViewPost, blockedByActor] = await Promise.all([
+        canViewPost(mentionedUser.id, input.post),
+        hasBlockBetween(input.actorId, mentionedUser.id),
+      ]);
+
+      if (!mentionedCanViewPost || blockedByActor) {
+        return;
+      }
+
+      await createNotificationAndTrim({
+        recipientId: mentionedUser.id,
+        actorId: input.actorId,
+        type: "USER_MENTIONED",
+        postId: input.post.id,
+        commentId: input.commentId,
+      });
+    }),
+  );
 }
 
 export async function createPostAction(formData: FormData) {
@@ -230,6 +287,15 @@ export async function toggleLikeAction(postId: string) {
           userId,
         },
       });
+
+      if (post.userId !== userId) {
+        await createNotificationAndTrim({
+          recipientId: post.userId,
+          actorId: userId,
+          type: "POST_LIKED",
+          postId: post.id,
+        });
+      }
     } catch (error) {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) {
         throw error;
@@ -270,7 +336,7 @@ export async function createCommentAction(postId: string, formData: FormData) {
     throw new Error("No puedes comentar en una publicación que no puedes ver.");
   }
 
-  await prisma.comment.create({
+  const comment = await prisma.comment.create({
     data: {
       content: parsedContent.data.content,
       postId: post.id,
@@ -279,8 +345,116 @@ export async function createCommentAction(postId: string, formData: FormData) {
     select: { id: true },
   });
 
+  const notifiedRecipientIds = new Set<string>();
+
+  if (post.userId !== userId) {
+    notifiedRecipientIds.add(post.userId);
+    await createNotificationAndTrim({
+      recipientId: post.userId,
+      actorId: userId,
+      type: "POST_COMMENTED",
+      postId: post.id,
+      commentId: comment.id,
+    });
+  }
+
+  await notifyCommentMentions({
+    actorId: userId,
+    content: parsedContent.data.content,
+    post,
+    commentId: comment.id,
+    skipRecipientIds: notifiedRecipientIds,
+  });
+
   revalidatePostViews(post.id);
+  revalidatePath("/notifications");
   redirect(`/posts/${post.id}?success=${encodeMessage("Comentario publicado correctamente.")}`);
+}
+
+export async function createReplyAction(postId: string, parentId: string, formData: FormData) {
+  const userId = await getRequiredUserId();
+  const parsedPostId = postIdSchema.safeParse(postId);
+  const parsedParentId = commentIdSchema.safeParse(parentId);
+
+  if (!parsedPostId.success || !parsedParentId.success) {
+    throw new Error("La respuesta no es válida.");
+  }
+
+  const parsedContent = commentContentSchema.safeParse({
+    content: formData.get("content"),
+  });
+
+  if (!parsedContent.success) {
+    postRedirect(`/posts/${parsedPostId.data}`, "error", parsedContent.error.issues[0]?.message ?? "Revisa la respuesta.");
+  }
+
+  const post = await prisma.post.findUnique({
+    where: { id: parsedPostId.data },
+    select: {
+      id: true,
+      userId: true,
+      visibility: true,
+    },
+  });
+
+  if (!post || !(await canViewPost(userId, post))) {
+    throw new Error("No puedes responder en una publicación que no puedes ver.");
+  }
+
+  const parentComment = await prisma.comment.findFirst({
+    where: { id: parsedParentId.data, postId: post.id, parentId: null },
+    select: { id: true, userId: true },
+  });
+
+  if (!parentComment) {
+    throw new Error("No se encontró el comentario que quieres responder.");
+  }
+
+  const reply = await prisma.comment.create({
+    data: {
+      content: parsedContent.data.content,
+      postId: post.id,
+      parentId: parentComment.id,
+      userId,
+    },
+    select: { id: true },
+  });
+
+  const notifiedRecipientIds = new Set<string>();
+
+  if (parentComment.userId !== userId) {
+    notifiedRecipientIds.add(parentComment.userId);
+    await createNotificationAndTrim({
+      recipientId: parentComment.userId,
+      actorId: userId,
+      type: "COMMENT_REPLIED",
+      postId: post.id,
+      commentId: reply.id,
+    });
+  }
+
+  if (post.userId !== userId && post.userId !== parentComment.userId) {
+    notifiedRecipientIds.add(post.userId);
+    await createNotificationAndTrim({
+      recipientId: post.userId,
+      actorId: userId,
+      type: "POST_COMMENTED",
+      postId: post.id,
+      commentId: reply.id,
+    });
+  }
+
+  await notifyCommentMentions({
+    actorId: userId,
+    content: parsedContent.data.content,
+    post,
+    commentId: reply.id,
+    skipRecipientIds: notifiedRecipientIds,
+  });
+
+  revalidatePostViews(post.id);
+  revalidatePath("/notifications");
+  redirect(`/posts/${post.id}?success=${encodeMessage("Respuesta publicada correctamente.")}#comments`);
 }
 
 export async function deleteCommentAction(commentId: string) {
