@@ -56,6 +56,24 @@ export function visiblePostWhere(viewerId: string): Prisma.PostWhereInput {
   };
 }
 
+export async function hasBlockBetween(userId: string, otherUserId: string) {
+  if (userId === otherUserId) {
+    return false;
+  }
+
+  const block = await prisma.userBlock.findFirst({
+    where: {
+      OR: [
+        { blockerId: userId, blockedId: otherUserId },
+        { blockerId: otherUserId, blockedId: userId },
+      ],
+    },
+    select: { id: true },
+  });
+
+  return block !== null;
+}
+
 export async function areAcceptedFriends(userId: string, otherUserId: string) {
   if (userId === otherUserId) {
     return true;
@@ -73,6 +91,10 @@ export async function canViewPost(
   userId: string,
   post: { userId: string; visibility: "PRIVATE" | "FRIENDS" | "PUBLIC" },
 ) {
+  if (post.userId !== userId && await hasBlockBetween(userId, post.userId)) {
+    return false;
+  }
+
   if (post.userId === userId || post.visibility === "PUBLIC") {
     return true;
   }
