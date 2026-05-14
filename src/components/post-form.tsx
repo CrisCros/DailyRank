@@ -5,7 +5,7 @@ import { Camera, ImagePlus, Trash2 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { SubmitButton } from "@/components/submit-button";
-import { MAX_POST_PHOTO_SIZE_BYTES, MAX_POST_PHOTO_SIZE_MB, isImageMimeType } from "@/lib/post-photos";
+import { MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB, isImageMimeType } from "@/lib/post-photos";
 import { ratingInputValue } from "@/lib/ratings";
 import { moodLabels, postMoods, postVisibilities, visibilityLabels } from "@/validations/posts";
 
@@ -71,10 +71,10 @@ export function PostForm({ action, cancelHref, mode, post }: PostFormProps) {
       return;
     }
 
-    if (file.size > MAX_POST_PHOTO_SIZE_BYTES) {
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
       event.target.value = "";
       updatePreviewUrl(removePhoto ? "" : (post?.photoUrl ?? ""));
-      setPhotoError(`La foto no puede superar ${MAX_POST_PHOTO_SIZE_MB} MB.`);
+      setPhotoError(`La imagen no puede superar ${MAX_IMAGE_SIZE_MB} MB.`);
       return;
     }
 
@@ -169,7 +169,7 @@ export function PostForm({ action, cancelHref, mode, post }: PostFormProps) {
               <Camera className="size-4" /> Foto opcional
             </label>
             <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-              En móvil se sugerirá la cámara trasera si el navegador lo soporta. En ordenador podrás elegir una imagen del equipo. Máximo {MAX_POST_PHOTO_SIZE_MB} MB.
+              En móvil se sugerirá la cámara trasera si el navegador lo soporta. En ordenador podrás elegir una imagen del equipo. Máximo {MAX_IMAGE_SIZE_MB} MB.
             </p>
           </div>
           {previewUrl ? (

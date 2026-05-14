@@ -1,5 +1,7 @@
 import type { PostMood } from "@prisma/client";
 
+import { prisma } from "@/lib/prisma";
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export type StatsPost = {
@@ -103,12 +105,19 @@ function average(values: number[]) {
   return roundMetric(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
-function calculateCurrentStreak(sortedDateKeys: string[], today: Date) {
+export function calculateCurrentStreak(sortedDateKeys: string[], now = new Date()) {
   if (sortedDateKeys.length === 0) return 0;
 
   const publishedDates = new Set(sortedDateKeys);
-  const todayKey = dateKey(today);
-  const anchorKey = publishedDates.has(todayKey) ? todayKey : sortedDateKeys.at(-1) ?? todayKey;
+  const todayKey = dateKey(now);
+  const yesterdayKey = dateKey(addDays(now, -1));
+
+  // A streak is considered current when the user posted today, or paused but
+  // still visible when the last daily was yesterday. Older gaps reset it to 0.
+  const anchorKey = publishedDates.has(todayKey) ? todayKey : publishedDates.has(yesterdayKey) ? yesterdayKey : null;
+
+  if (!anchorKey) return 0;
+
   let cursor = parseDateKey(anchorKey);
   let streak = 0;
 
@@ -139,6 +148,39 @@ function calculateBestStreak(sortedDateKeys: string[]) {
   }
 
   return bestStreak;
+}
+
+export async function getUsersCurrentStreaks(userIds: string[], now = new Date()) {
+  const uniqueUserIds = Array.from(new Set(userIds));
+
+  if (uniqueUserIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const posts = await prisma.post.findMany({
+    where: { userId: { in: uniqueUserIds }, date: { lte: now } },
+    orderBy: [{ userId: "asc" }, { date: "asc" }],
+    select: { userId: true, date: true },
+  });
+
+  const datesByUser = new Map<string, Set<string>>();
+
+  for (const post of posts) {
+    const dates = datesByUser.get(post.userId) ?? new Set<string>();
+    dates.add(dateKey(post.date));
+    datesByUser.set(post.userId, dates);
+  }
+
+  return new Map(
+    uniqueUserIds.map((userId) => {
+      const dateKeys = Array.from(datesByUser.get(userId) ?? []).sort();
+      return [userId, calculateCurrentStreak(dateKeys, now)] as const;
+    }),
+  );
+}
+
+export async function getUserCurrentStreak(userId: string, now = new Date()) {
+  return (await getUsersCurrentStreaks([userId], now)).get(userId) ?? 0;
 }
 
 export function buildPersonalStats(posts: StatsPost[], now = new Date()): StatsSummary {

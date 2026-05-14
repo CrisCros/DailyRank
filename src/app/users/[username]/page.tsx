@@ -19,10 +19,12 @@ import {
 import { authOptions } from "@/auth";
 import { AppShell } from "@/components/app-shell";
 import { Notice } from "@/components/notice";
+import { StreakSummary } from "@/components/streak-badge";
 import { SubmitButton } from "@/components/submit-button";
 import { UserAvatar } from "@/components/user-avatar";
 import { friendshipPairKey } from "@/lib/friendships";
 import { prisma } from "@/lib/prisma";
+import { getUserCurrentStreak } from "@/lib/stats";
 
 type PublicUserPageProps = {
   params: Promise<{ username: string }>;
@@ -66,7 +68,7 @@ export default async function PublicUserPage({
     redirect("/profile");
   }
 
-  const [blockingRelation, friendship, unreadNotificationsCount] =
+  const [blockingRelation, friendship, unreadNotificationsCount, currentStreak] =
     await Promise.all([
       prisma.userBlock.findFirst({
         where: {
@@ -82,6 +84,7 @@ export default async function PublicUserPage({
         select: { id: true, requesterId: true, receiverId: true, status: true },
       }),
       prisma.notification.count({ where: { recipientId: session.user.id } }),
+      getUserCurrentStreak(profile.id),
     ]);
 
   if (blockingRelation) {
@@ -132,6 +135,10 @@ export default async function PublicUserPage({
                 {profile.bio ??
                   "Este usuario todavía no ha añadido una biografía."}
               </p>
+            </div>
+
+            <div className="mt-6">
+              <StreakSummary streak={currentStreak} />
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
