@@ -79,19 +79,19 @@ export default async function SettingsPage({
           </p>
         </div>
 
+        <AvatarSettingsForm
+          user={{
+            name: user.name,
+            username: user.username,
+            image: user.image,
+          }}
+        />
+
         <form
           action={updateAccountSettingsAction}
           className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950"
         >
           <Notice error={params.error} success={params.success} />
-
-          <AvatarSettingsForm
-            user={{
-              name: user.name,
-              username: user.username,
-              image: user.image,
-            }}
-          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
